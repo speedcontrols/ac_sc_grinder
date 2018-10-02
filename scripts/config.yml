@@ -1,0 +1,102 @@
+schema:
+  properties:
+    1:
+      title: Shunt value (mOhms)
+      name: SHUNT_RESISTANCE
+      description: >
+        Current sensor shunt resistance (mOhm)
+      required: true
+      default: 10
+      minimum: 1
+      maximum: 1000
+
+    2:
+      title: Motor resistance (Ohms)
+      name: MOTOR_RESISTANCE
+      description: >
+        Can be autocalibrated
+      required: true
+      default: 140
+      minimum: 1
+      maximum: 1000
+
+    3:
+      title: RPM at max voltage without load
+      name: RPM_MAX
+      description: >
+        Maximum speed (RPM)
+      required: true
+      default: 37500
+      minimum: 0
+      maximum: 40000
+
+    4:
+      title: Max motor power (Watts)
+      name: POWER_MAX
+      description: >
+        Motor power limit threshold (% of nominal power)
+      required: true
+      default: 230
+      minimum: 100
+      maximum: 400
+
+    5:
+      title: Limit minimal possible RPM
+      name: RPM_MIN_LIMIT
+      description: >
+        Minimal speed (RPM)
+      required: true
+      default: 5000
+      minimum: 0
+      maximum: 40000
+
+    6:
+      title: Limit maximal possible RPM
+      name: RPM_MAX_LIMIT
+      description: >
+        Maximal speed (RPM)
+      required: true
+      default: 30000
+      minimum: 0
+      maximum: 40000
+
+    7:
+      title: Proportional term of PID controller
+      name: PID_P
+      description: >
+        K_P: 1.0...10.0 (can be autocalibrated)
+      required: true
+      default: 1.3
+      minimum: 1
+      maximum: 10
+
+    8:
+      title: Integral term of PID controller
+      name: PID_I
+      description: >
+        K_I: 0.1...10.0 (can be autocalibrated)
+      required: true
+      default: 3.0
+      minimum: 0.1
+      maximum: 10
+
+    9:
+      title: Speed knob zero zone (%)
+      name: DEAD_ZONE_WIDTH
+      description: >
+        Define initial zone where motor shound not run (% of max range)
+      required: true
+      default: 2
+      minimum: 1
+      maximum: 10
+
+    10:
+      title: R_ekv to speed factor
+      name: REKV_TO_SPEED_FACTOR
+      description: >
+        Constructive coefficient between normalized motor speed
+        and back-EMF equivalent resistance. Can be autocalibrated.
+      required: true
+      default: 450
+      minimum: 100
+      maximum: 10000
