@@ -25,6 +25,10 @@ public:
   // Output power [0..1] for triac control
   fix16_t out_power = 0;
 
+  // PID coefficients
+  fix16_t cfg_pid_p;
+  fix16_t cfg_pid_i_inv;
+
   // 2 PIDs inside, but only one is active:
   //
   // - `pid_speed` used in normal mode
@@ -131,9 +135,7 @@ public:
 private:
   // Control dead zone width near 0, when motor should not run.
   fix16_t cfg_dead_zone_width_norm;
-  // PID coefficients
-  fix16_t cfg_pid_p;
-  fix16_t cfg_pid_i_inv;
+
   // Config limits are now in normalized [0.0..1.0] form of max motor RPM.
   fix16_t cfg_rpm_max_limit_norm;
   fix16_t cfg_rpm_min_limit_norm;

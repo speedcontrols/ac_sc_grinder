@@ -11,6 +11,7 @@
 #include "calibrator/calibrator_wait_knob_dial.h"
 #include "calibrator/calibrator_static.h"
 #include "calibrator/calibrator_speed.h"
+#include "calibrator/calibrator_pid.h"
 
 extern TriacDriver triacDriver;
 
@@ -42,7 +43,11 @@ public:
       return true;
 
     case CALIBRATE_SPEED:
-      if (calibrate_speed.tick()) set_state(WAIT_START_CONDITION);
+      if (calibrate_speed.tick()) set_state(CALIBRATE_PID);
+      return true;
+
+    case CALIBRATE_PID:
+      if (calibrate_pid.tick()) set_state(WAIT_START_CONDITION);
       return true;
     }
 
@@ -54,7 +59,8 @@ private:
   enum CalibratorState {
     WAIT_START_CONDITION,
     CALIBRATE_STATIC,
-    CALIBRATE_SPEED
+    CALIBRATE_SPEED,
+    CALIBRATE_PID
   } state = WAIT_START_CONDITION;
 
   int ticks_cnt = 0;
@@ -68,6 +74,7 @@ private:
   CalibratorWaitKnobDial wait_knob_dial;
   CalibratorStatic calibrate_static;
   CalibratorSpeed calibrate_speed;
+  CalibratorPID calibrate_pid;
 };
 
 #endif
