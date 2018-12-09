@@ -7,6 +7,8 @@
 #include "../triac_driver.h"
 #include "../speed_controller.h"
 
+#include <math.h>
+
 extern Sensors sensors;
 extern TriacDriver triacDriver;
 extern SpeedController speedController;
@@ -43,7 +45,7 @@ static const fix16_t start_stop_adjust = fix16_from_float(
 
 #define SPEED_TICKS_FREQ 50
 
-// Lowpass coefficient value for 5 Hz 
+// Lowpass coefficient value for 5 Hz
 // cutoff frequency
 #define LOWPASS_FILTER_ALPHA 0.3859
 
@@ -57,7 +59,7 @@ public:
       // motor must run at steady low speed
       case INIT_WAIT_STABLE_LOW_SPEED:
         setpoint = F16(LOW_SPEED_SETPOINT);
-      
+
         triacDriver.setpoint = setpoint;
 
         // Init local iteration vars.
@@ -72,7 +74,7 @@ public:
 
         median_filter.add(sensors.speed);
         ticks_cnt++;
-        
+
         // ~ 0.25s
         if (ticks_cnt >= 12)
         {
@@ -93,7 +95,7 @@ public:
 
       case INIT_MEASURE_START_TIME:
         setpoint = F16(HIGH_SPEED_SETPOINT);
-      
+
         triacDriver.setpoint = setpoint;
 
         // Init local iteration vars.
@@ -109,11 +111,11 @@ public:
 
         median_filter.add(sensors.speed);
         ticks_cnt++;
-        
+
         if (speed_data_idx < speed_data_length)
-        { 
+        {
           if (speed_data_idx == 0) start_speed_data[speed_data_idx++] = sensors.speed;
-          else 
+          else
           {
             // Apply lowpass filtration
             fix16_t filtered_speed = fix16_mul(
@@ -126,8 +128,8 @@ public:
 
             start_speed_data[speed_data_idx++] = filtered_speed;
           }
-        } 
-        
+        }
+
         // ~ 0.25s
         if (ticks_cnt >= 12)
         {
@@ -165,11 +167,11 @@ public:
 
         median_filter.add(sensors.speed);
         ticks_cnt++;
-        
+
         if (speed_data_idx < speed_data_length)
         {
           if (speed_data_idx == 0) stop_speed_data[speed_data_idx++] = sensors.speed;
-          else 
+          else
           {
             // Apply lowpass filtration
             fix16_t filtered_speed = fix16_mul(
@@ -182,8 +184,8 @@ public:
 
             stop_speed_data[speed_data_idx++] = filtered_speed;
           }
-        } 
-        
+        }
+
         // ~ 0.25s
         if (ticks_cnt >= 12)
         {
@@ -237,7 +239,7 @@ public:
         speedController.tick();
         triacDriver.setpoint = speedController.out_power;
         triacDriver.tick();
-        
+
         if (!sensors.zero_cross_up) break;
 
         median_filter.add(sensors.speed);
@@ -252,7 +254,7 @@ public:
           if (is_speed_stable() || measure_attempts > 13)
           {
             measure_attempts = 0;
-            
+
             speedController.cfg_pid_p = pid_param_attempt_value;
 
             speed_buffer_idx = 0;
@@ -286,7 +288,7 @@ public:
           // Save variance of first iteration as reference
           // to compare values of next iterations to this value
           if (iterations_count == 0) first_iteration_variance = variance;
-          
+
           // If variance is less than margin value
           // step for next iteration should be positive,
           // otherwise - negative
@@ -294,13 +296,13 @@ public:
           else iteration_step = -abs(iteration_step);
 
           pid_param_attempt_value += iteration_step;
-          
+
           iteration_step /= 2;
 
           iterations_count++;
           if (iterations_count >= max_iterations)
           {
-            pid_p_calibrated_value = pid_param_attempt_value;   
+            pid_p_calibrated_value = pid_param_attempt_value;
             set_state(INIT_I_CALIBRATION);
             break;
           }
@@ -324,7 +326,7 @@ public:
         // to motor_start_stop_time
         // for reability of measurement.
         measure_overshoot_ticks_max = fix16_to_int(motor_start_stop_time * 50);
-        
+
         speedController.cfg_pid_p = pid_p_calibrated_value;
 
         set_state(WAIT_STABLE_SPEED_I_CALIBRATION);
@@ -344,7 +346,7 @@ public:
         speedController.tick();
         triacDriver.setpoint = speedController.out_power;
         triacDriver.tick();
-        
+
         if (!sensors.zero_cross_up) break;
 
         median_filter.add(sensors.speed);
@@ -359,7 +361,7 @@ public:
           if (is_speed_stable() || measure_attempts > 13)
           {
             measure_attempts = 0;
-                  
+
             speedController.cfg_pid_p = pid_p_calibrated_value;
             speedController.cfg_pid_i_inv = fix16_div(
               F16(1.0 / APP_PID_FREQUENCY),
@@ -399,7 +401,7 @@ public:
           // Save overshoot of first iteration as reference
           // to compare next iterations values to this value
           if (iterations_count == 0) first_iteration_overshoot_speed = overshoot_speed;
-          
+
           fix16_t overshoot = fix16_div(
             overshoot_speed - first_iteration_overshoot_speed,
             first_iteration_overshoot_speed
@@ -439,7 +441,7 @@ public:
         );
         speedController.configure();
         return true;
-        
+
         break;
     }
     return false;
@@ -496,14 +498,14 @@ private:
 
   fix16_t pid_p_calibrated_value;
   fix16_t pid_i_calibrated_value;
-  
+
   fix16_t iteration_step;
 
   // Holds value calculated during first attempt
   fix16_t first_iteration_variance;
 
   int iterations_count = 0;
-  
+
   fix16_t setpoint = 0;
 
   // History of measured speed. Used to detect stable values.
@@ -571,7 +573,7 @@ private:
 
     for (int i = 0; i < start_num; i++)
     {
-      if (start_data[i] > speed_at_measure_threshold) 
+      if (start_data[i] > speed_at_measure_threshold)
       {
         start_time_measured = F16(1.0 / SPEED_TICKS_FREQ) * i;
         break;
@@ -592,7 +594,7 @@ private:
 
     for (int i = 0; i < stop_num; i++)
     {
-      if (stop_data[i] < speed_at_measure_threshold) 
+      if (stop_data[i] < speed_at_measure_threshold)
       {
         stop_time_measured = F16(1.0 / SPEED_TICKS_FREQ) * i;
         break;
