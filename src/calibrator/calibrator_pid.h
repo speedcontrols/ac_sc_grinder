@@ -8,6 +8,7 @@
 #include "../speed_controller.h"
 
 #include <math.h>
+#include <limits.h>
 
 extern Sensors sensors;
 extern TriacDriver triacDriver;
@@ -43,7 +44,12 @@ static const fix16_t start_stop_adjust = fix16_from_float(
   log(SPEED_MEASURE_THRESHOLD)
 );
 
-#define SPEED_TICKS_FREQ 50
+// Frequency scale for data save when measure start/stop time.
+// Helps to save used memory
+#define SPEED_DATA_SAVE_RATIO 10
+
+// Max 10 seconds to store data on start/stop time measure
+#define SPEED_DATA_SAVE_TIME_MAX 10
 
 // Lowpass coefficient value for 5 Hz
 // cutoff frequency
@@ -63,34 +69,14 @@ public:
         triacDriver.setpoint = setpoint;
 
         // Init local iteration vars.
-        speed_log[2] = fix16_minimum; // prevent false positives without data
-        median_filter.reset();
-        ticks_cnt = 0;
+        wait_stable_speed_init();
         set_state(WAIT_STABLE_LOW_SPEED);
 
       case WAIT_STABLE_LOW_SPEED:
         triacDriver.tick();
         if (!sensors.zero_cross_up) break;
 
-        median_filter.add(sensors.speed);
-        ticks_cnt++;
-
-        // ~ 0.25s
-        if (ticks_cnt >= 12)
-        {
-          speed_log_push(median_filter.result());
-
-          if (is_speed_stable())
-          {
-            set_state(INIT_MEASURE_START_TIME);
-          }
-          // Init for next measure attempt
-          ticks_cnt = 0;
-          median_filter.reset();
-
-          break;
-        }
-
+        wait_stable_speed(sensors.speed, INIT_MEASURE_START_TIME, INT_MAX);
         break;
 
       case INIT_MEASURE_START_TIME:
@@ -99,119 +85,93 @@ public:
         triacDriver.setpoint = setpoint;
 
         // Init local iteration vars.
-        speed_log[2] = fix16_minimum; // prevent false positives without data
-        median_filter.reset();
+        wait_stable_speed_init();
         speed_data_idx = 0;
-        ticks_cnt = 0;
+        start_time_ticks = 0;
+        start_stop_scaler_cnt = 0;
         set_state(WAIT_STABLE_SPEED_UP);
 
       case WAIT_STABLE_SPEED_UP:
         triacDriver.tick();
-        if (!sensors.zero_cross_up) break;
+        start_time_ticks++;
 
-        median_filter.add(sensors.speed);
-        ticks_cnt++;
+        if (!sensors.zero_cross_up) break;
 
         if (speed_data_idx < speed_data_length)
         {
-          if (speed_data_idx == 0) start_speed_data[speed_data_idx++] = sensors.speed;
-          else
-          {
-            // Apply lowpass filtration
-            fix16_t filtered_speed = fix16_mul(
-              F16(LOWPASS_FILTER_ALPHA),
-              sensors.speed
-            ) + fix16_mul(
-              F16(1.0 - LOWPASS_FILTER_ALPHA),
-              start_speed_data[speed_data_idx - 1]
-            );
+          // Apply lowpass filtration
+          filtered_speed = fix16_mul(
+            F16(LOWPASS_FILTER_ALPHA),
+            sensors.speed
+          ) + fix16_mul(
+            F16(1.0 - LOWPASS_FILTER_ALPHA),
+            (speed_data_idx == 0) ? sensors.speed : filtered_speed
+          );
 
+          if (start_stop_scaler_cnt == 0) {
             start_speed_data[speed_data_idx++] = filtered_speed;
           }
+
+          start_stop_scaler_cnt++;
+          if (start_stop_scaler_cnt == SPEED_DATA_SAVE_RATIO) start_stop_scaler_cnt = 0;
         }
 
-        // ~ 0.25s
-        if (ticks_cnt >= 12)
-        {
-          speed_log_push(median_filter.result());
-
-          if (is_speed_stable())
-          {
-            start_speed_data_num_points = speed_data_idx;
-            set_state(INIT_MEASURE_STOP_TIME);
-          }
-          // Init for next measure attempt
-          ticks_cnt = 0;
-          median_filter.reset();
-
-          break;
-        }
+        wait_stable_speed(sensors.speed, INIT_MEASURE_STOP_TIME, INT_MAX);
 
         break;
 
       case INIT_MEASURE_STOP_TIME:
+        start_speed_data_len = speed_data_idx;
+
         setpoint = F16(LOW_SPEED_SETPOINT);
         triacDriver.setpoint = setpoint;
 
         // Init local iteration vars.
-        speed_log[2] = fix16_minimum; // prevent false positives without data
-        median_filter.reset();
+        wait_stable_speed_init();
         speed_data_idx = 0;
-        ticks_cnt = 0;
-
+        stop_time_ticks = 0;
+        start_stop_scaler_cnt = 0;
         set_state(WAIT_STABLE_SPEED_DOWN);
 
       case WAIT_STABLE_SPEED_DOWN:
         triacDriver.tick();
-        if (!sensors.zero_cross_up) break;
+        stop_time_ticks++;
 
-        median_filter.add(sensors.speed);
-        ticks_cnt++;
+        if (!sensors.zero_cross_up) break;
 
         if (speed_data_idx < speed_data_length)
         {
-          if (speed_data_idx == 0) stop_speed_data[speed_data_idx++] = sensors.speed;
-          else
-          {
-            // Apply lowpass filtration
-            fix16_t filtered_speed = fix16_mul(
-              F16(LOWPASS_FILTER_ALPHA),
-              sensors.speed
-            ) + fix16_mul(
-              F16(1.0 - LOWPASS_FILTER_ALPHA),
-              start_speed_data[speed_data_idx - 1]
-            );
+          // Apply lowpass filtration
+          filtered_speed = fix16_mul(
+            F16(LOWPASS_FILTER_ALPHA),
+            sensors.speed
+          ) + fix16_mul(
+            F16(1.0 - LOWPASS_FILTER_ALPHA),
+            (speed_data_idx == 0) ? sensors.speed : filtered_speed
+          );
 
+          if (start_stop_scaler_cnt == 0) {
             stop_speed_data[speed_data_idx++] = filtered_speed;
           }
+
+          start_stop_scaler_cnt++;
+          if (start_stop_scaler_cnt == SPEED_DATA_SAVE_RATIO) start_stop_scaler_cnt = 0;
+
         }
 
-        // ~ 0.25s
-        if (ticks_cnt >= 12)
-        {
-          speed_log_push(median_filter.result());
-
-          if (is_speed_stable())
-          {
-            stop_speed_data_num_points = speed_data_idx;
-            motor_start_stop_time = calculate_start_stop_time(
-              start_speed_data_num_points,
-              start_speed_data,
-              stop_speed_data_num_points,
-              stop_speed_data
-            );
-            set_state(INIT_P_CALIBRATION);
-          }
-          // Init for next measure attempt
-          ticks_cnt = 0;
-          median_filter.reset();
-
-          break;
-        }
+        wait_stable_speed(sensors.speed, INIT_P_CALIBRATION, INT_MAX);
 
         break;
 
       case INIT_P_CALIBRATION:
+        stop_speed_data_len = speed_data_idx;
+        motor_start_stop_time = calculate_start_stop_time(
+          start_speed_data_len,
+          start_speed_data,
+          stop_speed_data_len,
+          stop_speed_data
+        );
+
         iterations_count = 0;
         iteration_step = F16(INIT_P_ITERATION_STEP);
 
@@ -222,9 +182,13 @@ public:
           motor_start_stop_time
         );
 
-        set_state(WAIT_STABLE_SPEED_P_CALIBRATION);
+        set_state(WAIT_STABLE_SPEED_P_CALIBRATION_START);
 
-      case WAIT_STABLE_SPEED_P_CALIBRATION:
+      case WAIT_STABLE_SPEED_P_CALIBRATION_START:
+        wait_stable_speed_init();
+        set_state(WAIT_STABLE_SPEED_P_CALIBRATION_CYCLE);
+
+      case WAIT_STABLE_SPEED_P_CALIBRATION_CYCLE:
         // Wait for stable speed with minimal
         // PID_P and maximal PID_I
         speedController.cfg_pid_p = F16(MIN_P);
@@ -242,35 +206,16 @@ public:
 
         if (!sensors.zero_cross_up) break;
 
-        median_filter.add(sensors.speed);
-        ticks_cnt++;
-
-        // ~ 0.25s
-        if (ticks_cnt >= 12)
-        {
-          speed_log_push(median_filter.result());
-
-          // if speed stable OR waited > 3 sec => record data
-          if (is_speed_stable() || measure_attempts > 13)
-          {
-            measure_attempts = 0;
-
-            speedController.cfg_pid_p = pid_param_attempt_value;
-
-            speed_buffer_idx = 0;
-            set_state(MEASURE_VARIANCE);
-          }
-          measure_attempts++;
-          // Init for next measure attempt
-          ticks_cnt = 0;
-          median_filter.reset();
-
-          break;
-        }
+        wait_stable_speed(sensors.speed, MEASURE_VARIANCE_START, 13);
 
         break;
 
-      case MEASURE_VARIANCE:
+      case MEASURE_VARIANCE_START:
+        speedController.cfg_pid_p = pid_param_attempt_value;
+        speed_buffer_idx = 0;
+        set_state(MEASURE_VARIANCE_CYCLE);
+
+      case MEASURE_VARIANCE_CYCLE:
         speedController.in_knob = F16(PID_P_SETPOINT);
         speedController.in_speed = sensors.speed;
         speedController.tick();
@@ -306,7 +251,7 @@ public:
             set_state(INIT_I_CALIBRATION);
             break;
           }
-          set_state(WAIT_STABLE_SPEED_P_CALIBRATION);
+          set_state(WAIT_STABLE_SPEED_P_CALIBRATION_START);
         }
 
         break;
@@ -329,9 +274,13 @@ public:
 
         speedController.cfg_pid_p = pid_p_calibrated_value;
 
-        set_state(WAIT_STABLE_SPEED_I_CALIBRATION);
+        set_state(WAIT_STABLE_SPEED_I_CALIBRATION_START);
 
-      case WAIT_STABLE_SPEED_I_CALIBRATION:
+      case WAIT_STABLE_SPEED_I_CALIBRATION_START:
+        wait_stable_speed_init();
+        set_state(WAIT_STABLE_SPEED_I_CALIBRATION_CYCLE);
+
+      case WAIT_STABLE_SPEED_I_CALIBRATION_CYCLE:
         // Wait for stable speed with minimal
         // PID_P and maximal PID_I
         speedController.cfg_pid_p = F16(MIN_P);
@@ -349,40 +298,22 @@ public:
 
         if (!sensors.zero_cross_up) break;
 
-        median_filter.add(sensors.speed);
-        ticks_cnt++;
-
-        // ~ 0.25s
-        if (ticks_cnt >= 12)
-        {
-          speed_log_push(median_filter.result());
-
-          // if speed stable OR waited > 3 sec => record data
-          if (is_speed_stable() || measure_attempts > 13)
-          {
-            measure_attempts = 0;
-
-            speedController.cfg_pid_p = pid_p_calibrated_value;
-            speedController.cfg_pid_i_inv = fix16_div(
-              F16(1.0 / APP_PID_FREQUENCY),
-              pid_param_attempt_value
-            );
-
-            measure_overshoot_ticks = 0;
-            overshoot_speed = 0;
-            set_state(MEASURE_OVERSHOOT);
-          }
-          measure_attempts++;
-          // Init for next measure attempt
-          ticks_cnt = 0;
-          median_filter.reset();
-
-          break;
-        }
+        wait_stable_speed(sensors.speed, MEASURE_OVERSHOOT_START, 13);
 
         break;
 
-      case MEASURE_OVERSHOOT:
+      case MEASURE_OVERSHOOT_START:
+        speedController.cfg_pid_p = pid_p_calibrated_value;
+        speedController.cfg_pid_i_inv = fix16_div(
+          F16(1.0 / APP_PID_FREQUENCY),
+          pid_param_attempt_value
+        );
+
+        measure_overshoot_ticks = 0;
+        overshoot_speed = 0;
+        set_state(MEASURE_OVERSHOOT_CYCLE);
+
+      case MEASURE_OVERSHOOT_CYCLE:
         speedController.in_knob = F16(PID_I_OVERSHOOT_SETPOINT);
         speedController.in_speed = sensors.speed;
         speedController.tick();
@@ -424,7 +355,7 @@ public:
             set_state(STOP);
             break;
           }
-          set_state(WAIT_STABLE_SPEED_I_CALIBRATION);
+          set_state(WAIT_STABLE_SPEED_I_CALIBRATION_START);
         }
 
         break;
@@ -440,9 +371,8 @@ public:
           fix16_to_float(pid_i_calibrated_value) / PID_SAFETY_SCALE
         );
         speedController.configure();
+        set_state(INIT_WAIT_STABLE_LOW_SPEED); // Reset state to initial
         return true;
-
-        break;
     }
     return false;
   }
@@ -457,11 +387,15 @@ private:
     INIT_MEASURE_STOP_TIME,
     WAIT_STABLE_SPEED_DOWN,
     INIT_P_CALIBRATION,
-    WAIT_STABLE_SPEED_P_CALIBRATION,
-    MEASURE_VARIANCE,
+    WAIT_STABLE_SPEED_P_CALIBRATION_START,
+    WAIT_STABLE_SPEED_P_CALIBRATION_CYCLE,
+    MEASURE_VARIANCE_START,
+    MEASURE_VARIANCE_CYCLE,
     INIT_I_CALIBRATION,
-    WAIT_STABLE_SPEED_I_CALIBRATION,
-    MEASURE_OVERSHOOT,
+    WAIT_STABLE_SPEED_I_CALIBRATION_START,
+    WAIT_STABLE_SPEED_I_CALIBRATION_CYCLE,
+    MEASURE_OVERSHOOT_START,
+    MEASURE_OVERSHOOT_CYCLE,
     STOP
   } state = INIT_WAIT_STABLE_LOW_SPEED;
 
@@ -477,7 +411,7 @@ private:
   // Holds speed values for variance calculation
   enum {
     speed_buffer_length = 50,
-    speed_data_length = 250
+    speed_data_length = (int)(SPEED_DATA_SAVE_TIME_MAX * 60 / SPEED_DATA_SAVE_RATIO)
   };
 
   fix16_t speed_buffer[speed_buffer_length];
@@ -488,11 +422,15 @@ private:
   fix16_t start_speed_data[speed_data_length];
   fix16_t stop_speed_data[speed_data_length];
   int speed_data_idx = 0;
+  int start_time_ticks = 0;
+  int stop_time_ticks = 0;
+  int start_stop_scaler_cnt;
+  fix16_t filtered_speed = 0;
 
   fix16_t prev_speed = 0;
 
-  int start_speed_data_num_points;
-  int stop_speed_data_num_points;
+  int start_speed_data_len;
+  int stop_speed_data_len;
 
   fix16_t pid_param_attempt_value;
 
@@ -553,13 +491,13 @@ private:
 
   // Returns sum of start and stop times
   fix16_t calculate_start_stop_time(
-    int start_num,
+    int start_len,
     fix16_t start_data[],
-    int stop_num,
+    int stop_len,
     fix16_t stop_data[]
   )
   {
-    fix16_t start_steady_speed = start_data[start_num - 1];
+    fix16_t start_steady_speed = start_data[start_len - 1];
     fix16_t start_initial_speed = start_data[0];
     fix16_t speed_at_measure_threshold = fix16_mul(
       start_steady_speed,
@@ -571,16 +509,16 @@ private:
 
     fix16_t start_time_measured = 0;
 
-    for (int i = 0; i < start_num; i++)
+    for (int i = 0; i < start_len; i++)
     {
       if (start_data[i] > speed_at_measure_threshold)
       {
-        start_time_measured = F16(1.0 / SPEED_TICKS_FREQ) * i;
+        start_time_measured = fix16_from_float((float)i / start_len * start_time_ticks / APP_TICK_FREQUENCY);
         break;
       }
     }
 
-    fix16_t stop_steady_speed = stop_data[stop_num - 1];
+    fix16_t stop_steady_speed = stop_data[stop_len - 1];
     fix16_t stop_initial_speed = stop_data[0];
     speed_at_measure_threshold = fix16_mul(
       stop_steady_speed,
@@ -592,11 +530,11 @@ private:
 
     fix16_t stop_time_measured = 0;
 
-    for (int i = 0; i < stop_num; i++)
+    for (int i = 0; i < stop_len; i++)
     {
       if (stop_data[i] < speed_at_measure_threshold)
       {
-        stop_time_measured = F16(1.0 / SPEED_TICKS_FREQ) * i;
+        stop_time_measured = fix16_from_float(float(i) / stop_len * stop_time_ticks / APP_TICK_FREQUENCY);
         break;
       }
     }
@@ -613,29 +551,57 @@ private:
     return start_stop_time;
   }
 
-  bool is_speed_stable()
-  {
-    fix16_t a = speed_log[0], b = speed_log[1], c = speed_log[2];
-
-    fix16_t min = (a <= b && a <= c) ? a : ((b <= a && b <= c) ? b : c);
-    fix16_t max = (a >= b && a >= c) ? a : ((b >= a && b >= c) ? b : c);
-
-    fix16_t diff = max - min;
-
-    fix16_t abs_max = max > 0 ? max : - max;
-    fix16_t abs_diff = diff > 0 ? diff : - diff;
-
-    // Speed stable if difference <= 5 %.
-    return abs_diff <= abs_max * 5 / 100;
+  void wait_stable_speed_init() {
+    speed_log[2] = fix16_minimum;  // prevent false positives on empty data
+    measure_attempts = 0;
+    ticks_cnt = 0;
+    median_filter.reset();
   }
 
-  void speed_log_push(fix16_t val)
-  {
-    speed_log[0] = speed_log[1];
-    speed_log[1] = speed_log[2];
-    speed_log[2] = val;
-  }
+  void wait_stable_speed(
+    fix16_t current_speed,
+    State next_state_on_success,
+    int max_attempts
+  ) {
+    median_filter.add(current_speed);
+    ticks_cnt++;
 
+    // ~ 0.25s
+    if (ticks_cnt >= 12)
+    {
+      speed_log[0] = speed_log[1];
+      speed_log[1] = speed_log[2];
+      speed_log[2] = median_filter.result();
+
+      // if speed stable OR waited > 3 sec => record data
+
+      if (measure_attempts > max_attempts) {
+        set_state(next_state_on_success);
+        return;
+      }
+
+      // Speed stable if difference <= 5 %.
+      fix16_t a = speed_log[0], b = speed_log[1], c = speed_log[2];
+
+      fix16_t min = (a <= b && a <= c) ? a : ((b <= a && b <= c) ? b : c);
+      fix16_t max = (a >= b && a >= c) ? a : ((b >= a && b >= c) ? b : c);
+
+      fix16_t diff = max - min;
+
+      fix16_t abs_max = max > 0 ? max : - max;
+      fix16_t abs_diff = diff > 0 ? diff : - diff;
+
+      if (abs_diff <= abs_max * 5 / 100) {
+        set_state(next_state_on_success);
+        return;
+      }
+
+      // Prepare for next measure attempt
+      measure_attempts++;
+      ticks_cnt = 0;
+      median_filter.reset();
+    }
+  }
 };
 
 
