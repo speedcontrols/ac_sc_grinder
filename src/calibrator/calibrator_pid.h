@@ -18,11 +18,17 @@ extern SpeedController speedController;
 #define INIT_P_ITERATION_STEP 4.0
 
 // Scale down PID to this value for safety
-#define PID_SAFETY_SCALE 0.9
+#define PID_SAFETY_SCALE 0.75
 
 #define PID_P_SETPOINT 0.3
-#define PID_I_OVERSHOOT_SETPOINT 0.4
+#define PID_I_OVERSHOOT_SETPOINT 0.8
 #define PID_I_START_SETPOINT 0.3
+
+// Maximum speed oscillation amplitude
+// and speed overshoot values
+// for PID_P and PID_I adjustment
+#define MAX_AMPLITUDE 1.1
+#define MAX_OVERSHOOT 0.15
 
 // Setpoint values for start and
 // stop time measurement.
@@ -51,9 +57,13 @@ static const fix16_t start_stop_adjust = fix16_from_float(
 // Max 10 seconds to store data on start/stop time measure
 #define SPEED_DATA_SAVE_TIME_MAX 10
 
-// Lowpass coefficient value for 5 Hz
-// cutoff frequency
-#define LOWPASS_FILTER_ALPHA 0.3859
+// Lowpass coefficient value
+// LOWPASS_FC - cutoff frequency, Hz
+// LOWPASS_FD - sampling frequency, Hz
+#define LOWPASS_FC 5.0
+#define LOWPASS_FS 50.0
+#define LOWPASS_FILTER_ALPHA ((2.0 * M_PI / LOWPASS_FS * LOWPASS_FC) \
+                              / (2.0 * M_PI / LOWPASS_FS * LOWPASS_FC + 1.0))
 
 class CalibratorPID {
 public:
@@ -177,6 +187,9 @@ public:
 
         pid_param_attempt_value = F16(MIN_P);
 
+        // TODO - Measure period duration for correct operation at 50 and 60 Hz
+        measure_amplitude_ticks_max = fix16_to_int(motor_start_stop_time * 50);
+
         speedController.cfg_pid_i_inv = fix16_div(
           F16(1.0 / APP_PID_FREQUENCY),
           motor_start_stop_time
@@ -206,16 +219,19 @@ public:
 
         if (!sensors.zero_cross_up) break;
 
-        wait_stable_speed(sensors.speed, MEASURE_VARIANCE_START, 13);
+        wait_stable_speed(sensors.speed, MEASURE_AMPLITUDE_START, 13);
 
         break;
 
-      case MEASURE_VARIANCE_START:
+      case MEASURE_AMPLITUDE_START:
         speedController.cfg_pid_p = pid_param_attempt_value;
-        speed_buffer_idx = 0;
-        set_state(MEASURE_VARIANCE_CYCLE);
+        measure_amplitude_max_speed = 0;
+        measure_amplitude_min_speed = fix16_maximum;
+        measure_amplitude_ticks = 0;
+        median_filter.reset();
+        set_state(MEASURE_AMPLITUDE_CYCLE);
 
-      case MEASURE_VARIANCE_CYCLE:
+      case MEASURE_AMPLITUDE_CYCLE:
         speedController.in_knob = F16(PID_P_SETPOINT);
         speedController.in_speed = sensors.speed;
         speedController.tick();
@@ -224,30 +240,51 @@ public:
 
         if (!sensors.zero_cross_up) break;
 
-        speed_buffer[speed_buffer_idx++] = sensors.speed;
+        ticks_cnt++;
+        median_filter.add(sensors.speed);
 
-        if (speed_buffer_idx >= speed_buffer_length)
+        if (ticks_cnt >= 12)
         {
-          fix16_t variance = calculate_variance(speed_buffer_idx, speed_buffer);
+          fix16_t filtered_speed = median_filter.result();
+          median_filter.reset();
+          ticks_cnt = 0;
 
-          // Save variance of first iteration as reference
+          if (measure_amplitude_max_speed < filtered_speed)
+          {
+            measure_amplitude_max_speed = filtered_speed;
+          }
+          if (measure_amplitude_min_speed > filtered_speed)
+          {
+            measure_amplitude_min_speed = filtered_speed;
+          }
+        }
+
+        measure_amplitude_ticks++;
+
+        if (measure_amplitude_ticks >= measure_amplitude_ticks_max)
+        {
+          fix16_t amplitude = measure_amplitude_max_speed - measure_amplitude_min_speed;
+
+          // Save amplitude of first iteration as reference
           // to compare values of next iterations to this value
-          if (iterations_count == 0) first_iteration_variance = variance;
+          if (iterations_count == 0) first_iteration_amplitude = amplitude;
 
-          // If variance is less than margin value
+          // If amplitude is less than margin value
           // step for next iteration should be positive,
           // otherwise - negative
-          if (variance <= first_iteration_variance * 2) iteration_step = abs(iteration_step);
+          if (amplitude <= fix16_mul(first_iteration_amplitude, F16(MAX_AMPLITUDE)))
+          {
+            iteration_step = abs(iteration_step);
+          }
           else iteration_step = -abs(iteration_step);
 
           pid_param_attempt_value += iteration_step;
 
           iteration_step /= 2;
-
           iterations_count++;
           if (iterations_count >= max_iterations)
           {
-            pid_p_calibrated_value = pid_param_attempt_value;
+            pid_p_calibrated_value = fix16_mul(pid_param_attempt_value, F16(PID_SAFETY_SCALE));
             set_state(INIT_I_CALIBRATION);
             break;
           }
@@ -286,7 +323,7 @@ public:
         speedController.cfg_pid_p = F16(MIN_P);
         speedController.cfg_pid_i_inv = fix16_div(
           F16(1.0 / APP_PID_FREQUENCY),
-          motor_start_stop_time
+          motor_start_stop_time / 2
         );
 
         speedController.in_knob = F16(PID_I_START_SETPOINT);
@@ -324,9 +361,17 @@ public:
 
         measure_overshoot_ticks++;
 
-        // Find max speed value
-        if (overshoot_speed < sensors.speed) overshoot_speed = sensors.speed;
+        // Apply lowpass filter to speed data
+        filtered_speed = fix16_mul(
+          F16(LOWPASS_FILTER_ALPHA),
+          sensors.speed
+        ) + fix16_mul(
+          F16(1.0 - LOWPASS_FILTER_ALPHA),
+          (measure_overshoot_ticks == 1) ? sensors.speed : filtered_speed
+        );
 
+        // Find max speed value
+        if (overshoot_speed < filtered_speed) overshoot_speed = filtered_speed;
         if (measure_overshoot_ticks >= measure_overshoot_ticks_max)
         {
           // Save overshoot of first iteration as reference
@@ -341,17 +386,16 @@ public:
           // If overshoot is greater than margin value
           // step for next iteration should be positive,
           // otherwise - negative
-          if (overshoot > F16(0.10)) iteration_step = abs(iteration_step);
+          if (overshoot > F16(MAX_OVERSHOOT)) iteration_step = abs(iteration_step);
           else iteration_step = -abs(iteration_step);
 
           pid_param_attempt_value += iteration_step;
 
           iteration_step /= 2;
-
           iterations_count++;
           if (iterations_count >= max_iterations)
           {
-            pid_i_calibrated_value = pid_param_attempt_value;
+            pid_i_calibrated_value = fix16_div(pid_param_attempt_value, F16(PID_SAFETY_SCALE));
             set_state(STOP);
             break;
           }
@@ -364,11 +408,11 @@ public:
         // Store in flash
         eeprom_float_write(
           CFG_PID_P_ADDR,
-          fix16_to_float(pid_p_calibrated_value) * PID_SAFETY_SCALE
+          fix16_to_float(pid_p_calibrated_value)
         );
         eeprom_float_write(
           CFG_PID_I_ADDR,
-          fix16_to_float(pid_i_calibrated_value) / PID_SAFETY_SCALE
+          fix16_to_float(pid_i_calibrated_value)
         );
         speedController.configure();
         set_state(INIT_WAIT_STABLE_LOW_SPEED); // Reset state to initial
@@ -389,8 +433,8 @@ private:
     INIT_P_CALIBRATION,
     WAIT_STABLE_SPEED_P_CALIBRATION_START,
     WAIT_STABLE_SPEED_P_CALIBRATION_CYCLE,
-    MEASURE_VARIANCE_START,
-    MEASURE_VARIANCE_CYCLE,
+    MEASURE_AMPLITUDE_START,
+    MEASURE_AMPLITUDE_CYCLE,
     INIT_I_CALIBRATION,
     WAIT_STABLE_SPEED_I_CALIBRATION_START,
     WAIT_STABLE_SPEED_I_CALIBRATION_CYCLE,
@@ -408,14 +452,10 @@ private:
 
   int ticks_cnt = 0;
 
-  // Holds speed values for variance calculation
+  // Holds buffer length for start/stop time calculation
   enum {
-    speed_buffer_length = 50,
     speed_data_length = (int)(SPEED_DATA_SAVE_TIME_MAX * 60 / SPEED_DATA_SAVE_RATIO)
   };
-
-  fix16_t speed_buffer[speed_buffer_length];
-  int speed_buffer_idx = 0;
 
   // Buffers for speed data for start/stop
   // time measurement
@@ -439,8 +479,11 @@ private:
 
   fix16_t iteration_step;
 
+  fix16_t measure_amplitude_max_speed;
+  fix16_t measure_amplitude_min_speed;
+
   // Holds value calculated during first attempt
-  fix16_t first_iteration_variance;
+  fix16_t first_iteration_amplitude;
 
   int iterations_count = 0;
 
@@ -451,8 +494,10 @@ private:
   int measure_attempts = 0;
 
   MedianIteratorTemplate<fix16_t, 32> median_filter;
-
   fix16_t motor_start_stop_time;
+
+  int measure_amplitude_ticks = 0;
+  int measure_amplitude_ticks_max;
 
   int measure_overshoot_ticks = 0;
   // Measure overshoot during period
@@ -467,26 +512,6 @@ private:
   {
     state = st;
     ticks_cnt = 0;
-  }
-
-  // Calculate variance of speed values
-  // in speed_buffer
-  fix16_t calculate_variance(int num_samples, fix16_t buffer[])
-  {
-    fix16_t speed_sum = 0;
-    fix16_t variance_sum = 0;
-
-    for (int i = 0; i < num_samples; i++) speed_sum += buffer[i];
-
-    fix16_t speed_mean = speed_sum / num_samples;
-
-    for (int i = 0; i < num_samples; i++)
-    {
-      fix16_t difference = buffer[i] - speed_mean;
-      variance_sum += fix16_mul(difference, difference);
-    }
-
-    return variance_sum / (num_samples - 1);
   }
 
   // Returns sum of start and stop times
@@ -591,7 +616,7 @@ private:
       fix16_t abs_max = max > 0 ? max : - max;
       fix16_t abs_diff = diff > 0 ? diff : - diff;
 
-      if (abs_diff <= abs_max * 5 / 100) {
+      if (abs_diff <= abs_max * 1 / 100) {
         set_state(next_state_on_success);
         return;
       }
