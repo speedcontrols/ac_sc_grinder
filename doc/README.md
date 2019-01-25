@@ -134,19 +134,26 @@ Basic start/stop time measure:
 Measure `P`:
 
 - Set `I` to max possible, `P` min possible (1), measure all at 0.3 setpoint.
-- Wait for stable speed and measure dispersion (noise)
-- Use starting step = +4.0, and halving method. Collect data for start-stop
-  time period, and check if dispersion > `noise * 2`
+- Wait for stable speed
+- Measure noise amplitude, abs(max - min) for period ~ start/stop time.
+- Use starting step = +4.0, and halving method. Check noise amplitude not exceed
+  110% of initial value.
 - Make 7 iterations total (last step will be 0.1 - good precision).
-- Use 0.9 of final value as safe.
+- Use 0.75 of final value as safe.
+
+It would be better to count dispersion instead, but that's more complicated.
+Counting min/max after median filter seems to work. Note, speed value is very
+noisy. Applying some filter before min/max check is mandatory.
 
 Measure `I`:
 
 - Set `I` to max possible, `P` to calibrated.
-- Change setpoint from 0.3 to 0.4 and measure max reached speed.
+- Apply 5Hz low pass Butterworth filter to input signal (median filter
+  has less predictable response)
+- Change setpoint from 0.3 to 0.8 and measure max reached speed.
 - Find `I` with halving method. On each step repeat setpoint change from 0.3
-  to 0.4, and check if overshoot not exceed 110% of initial max speed.
-- Use 0.9 of final value as safe.
+  to 0.8, and check if overshoot not exceed 15% of initial max speed.
+- Use 1/0.75 of final value as safe.
 
 
 ## Data flow
