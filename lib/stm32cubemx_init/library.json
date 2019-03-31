@@ -1,12 +1,9 @@
 {
   "name": "stm32cubemx_init",
   "description": "STM32CubeMX generated files",
+  "frameworks": ["stm32cube"],
   "build": {
-    "srcFilter": [
-      "+<Src>",
-      "+<Inc>",
-      "-<Src/system_stm32*.c>"
-    ],
+    "srcFilter": "+<*.c>, -<system_stm32*.c>",
     "flags": [
       "-I Inc"
     ]
