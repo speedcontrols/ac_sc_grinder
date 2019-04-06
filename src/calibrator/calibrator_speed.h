@@ -6,6 +6,7 @@
 
 #include "../math/fix16_math.h"
 #include "../math/polyfit.h"
+#include "../math/stability_filter.h"
 
 #include "../app.h"
 #include "../sensors.h"
@@ -46,7 +47,7 @@ public:
       triacDriver.setpoint = setpoint;
 
       // Init local iteration vars.
-      speed_log[2] = fix16_minimum; // prevent false positives without data
+      speed_tracker.reset();
       median_filter.reset();
       measure_attempts = 0;
 
@@ -65,10 +66,10 @@ public:
       // ~ 0.25s
       if (ticks_cnt >= 12)
       {
-        speed_log_push(median_filter.result());
+        speed_tracker.push(median_filter.result());
 
         // if sepeed stable OR waited > 3 sec => record data
-        if (sensors.speed == 0 || is_speed_stable() || measure_attempts > 13)
+        if (sensors.speed == 0 || speed_tracker.is_stable() || measure_attempts > 13)
         {
           // Save rpm value for current setpoint
           rpms[setpoint_idx] = fix16_to_float(median_filter.result());
@@ -131,8 +132,6 @@ private:
   int ticks_cnt = 0;
   fix16_t setpoint = 0;
 
-  // History of measured speed. Used to detect stable values.
-  fix16_t speed_log[3] = { 0, 0, fix16_minimum };
   int measure_attempts = 0;
 
   // Set of optimal to measurement setpoint values.
@@ -185,29 +184,7 @@ private:
     ticks_cnt = 0;
   }
 
-  bool is_speed_stable()
-  {
-    fix16_t a = speed_log[0], b = speed_log[1], c = speed_log[2];
-
-    fix16_t min = (a <= b && a <= c) ? a : ((b <= a && b <= c) ? b : c);
-    fix16_t max = (a >= b && a >= c) ? a : ((b >= a && b >= c) ? b : c);
-
-    fix16_t diff = max - min;
-
-    fix16_t abs_max = max > 0 ? max : - max;
-    fix16_t abs_diff = diff > 0 ? diff : - diff;
-
-    // Speed stable if difference <= 1/3 %.
-    // 1% is not always sufficient.
-    return abs_diff <= abs_max / 300;
-  }
-
-  void speed_log_push(fix16_t val)
-  {
-    speed_log[0] = speed_log[1];
-    speed_log[1] = speed_log[2];
-    speed_log[2] = val;
-  }
+  StabilityFilterTemplate<F16(0.3)> speed_tracker;
 
   // Max order of approximation polynomial
   enum { polynomial_order = 3 };
