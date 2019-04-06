@@ -4,8 +4,9 @@
   "build": {
     "srcFilter": [
       "+<Src>",
-      "+<Inc>",
-      "-<Src/system_stm32*.c>"
+      "+<*.c>",
+      "-<Src/system_stm32*.c>",
+      "-<system_stm32*.c>"
     ],
     "flags": [
       "-I Inc"

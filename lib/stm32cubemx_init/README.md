@@ -11,6 +11,16 @@ How to update:
 3. Make nesessary changes.
 4. Menu: `File` -> `Save Project`
 4. Menu: `Project` -> `Generate Code`.
-5. Make sure `Src/main.c` contains this lines: `#include "../../src/app.h"` &
+5. Make sure `Src/main.c` contains this lines: `#include "../../../src/app.h"` &
    `app_start();`
 6. Run build and check result.
+
+**library.json note**
+
+It may seem, `srcFilter` content is duplicated. That's intended to make build
+work on both Linux and Windows:
+
+- values with `Src` are for Linux
+- values without `Src` are for Windows
+
+Don't remove any!

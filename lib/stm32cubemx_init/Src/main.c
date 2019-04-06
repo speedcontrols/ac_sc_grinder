@@ -44,7 +44,7 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-#include "../../src/app.h"
+#include "../../../src/app.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
