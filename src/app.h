@@ -17,10 +17,10 @@
 
 // "EEPROM" location and size for RPM non-linearity conmensation table.
 // Starts after other config variables.
-#define CFG_RPM_INTERP_TABLE_START_ADDR 15
+#define CFG_RPM_INTERP_TABLE_START_ADDR 10
 #define CFG_RPM_INTERP_TABLE_LENGTH 16
 
-#define CFG_R_INTERP_TABLE_START_ADDR 31
+#define CFG_R_INTERP_TABLE_START_ADDR 26
 #define CFG_R_INTERP_TABLE_LENGTH 10
 
 extern void app_start();

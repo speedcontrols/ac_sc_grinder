@@ -37,6 +37,8 @@ public:
   bool zero_cross_up = false;
   bool zero_cross_down = false;
 
+  bool is_r_calibrated = false;
+
   // Config info
   fix16_t cfg_shunt_resistance_inv;
   fix16_t cfg_rpm_max_inv;
@@ -119,16 +121,19 @@ public:
       eeprom_float_read(CFG_REKV_TO_SPEED_FACTOR_ADDR, CFG_REKV_TO_SPEED_FACTOR_DEFAULT)
     );
 
+    #define R_CAL_CHECK_MARKER 123456789.0f
+
     for (int i = 0; i < CFG_R_INTERP_TABLE_LENGTH; i++)
     {
       cfg_r_table[i] = fix16_from_float(
           eeprom_float_read(
             i + CFG_R_INTERP_TABLE_START_ADDR,
-            CFG_MOTOR_RESISTANCE_DEFAULT
+            R_CAL_CHECK_MARKER
           )
       );
     }
 
+    is_r_calibrated = cfg_r_table[0] == R_CAL_CHECK_MARKER ? false : true;
   }
 
   // Split raw ADC data by separate buffers
@@ -318,6 +323,13 @@ private:
 
   void speed_tick()
   {
+    // Don't try to calculate speed until R calibrated
+    if (!is_r_calibrated)
+    {
+      speed = 0;
+      return;
+    }
+
     if (in_triac_on) triac_on_counter ++;
     else triac_on_counter = 0;
 

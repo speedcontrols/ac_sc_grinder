@@ -69,12 +69,19 @@ void app_start()
 
     // Normal processing
 
-    speedController.in_knob = sensors.knob;
-    speedController.in_speed = sensors.speed;
+    if (sensors.is_r_calibrated)
+    {
+      speedController.in_knob = sensors.knob;
+      speedController.in_speed = sensors.speed;
 
-    speedController.tick();
+      speedController.tick();
 
-    triacDriver.setpoint = speedController.out_power;
+      triacDriver.setpoint = speedController.out_power;
+    }
+    else {
+      // Force speed to some slow value when R is not calibrated
+      triacDriver.setpoint = 0.2;
+    }
 
     triacDriver.tick();
   }
