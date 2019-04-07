@@ -8,9 +8,12 @@
 #include <cmath>
 
 #include "../math/fix16_math.h"
+#include "../math/stability_filter.h"
 
 #include "../sensors.h"
 #include "../triac_driver.h"
+
+#define R_MEASURE_ATTEMPTS 3
 
 extern Sensors sensors;
 extern TriacDriver triacDriver;
@@ -34,11 +37,10 @@ public:
 
     // Reset variables and wait 1 second to make sure motor stopped.
     case INIT:
-      buffer_idx = 0;
-      zero_cross_down_offset = 0;
-
       triacDriver.setpoint = 0;
       triacDriver.tick();
+
+      r_interp_table_index = 0;
 
       // Pause 2 sec before calibration start to be sure
       // that motor stopped completely.
@@ -51,8 +53,9 @@ public:
 
       if (!sensors.zero_cross_up) break;
 
-      set_state(RECORD_NOIZE);
+      buffer_idx = 0;
 
+      set_state(RECORD_NOIZE);
       break;
 
     case RECORD_NOIZE:
@@ -66,22 +69,40 @@ public:
 
       process_thresholds();
 
+      set_state(R_MEASUE_LOOP);
+      break;
+
+    // Reinitialization and 0.5 sec pause
+    // before next calibration step
+    case R_MEASUE_LOOP:
+      r_stability_filter.reset();
+
+    case R_WAIT_STABLE_LOOP:
       buffer_idx = 0;
-      set_state(WAIT_ZERO_CROSS_2);
+      zero_cross_down_offset = 0;
+
+      triacDriver.setpoint = 0;
+      triacDriver.tick();
+
+      // Pause 0.5 sec before calibration with next setpoint value start
+      // to be sure that motor stopped completely.
+      if (ticks_cnt++ >= (APP_TICK_FREQUENCY / 2)) set_state(WAIT_ZERO_CROSS_2);
+
       break;
 
     // Calibration should be started at the begining of positive period
     case WAIT_ZERO_CROSS_2:
-
       triacDriver.tick();
 
+      // Wait positive wave
+      if (!sensors.zero_cross_up) break;
 
       // Fall down to recording immediately, we should not miss data for this tick
       set_state(RECORD_POSITIVE_WAVE);
 
     case RECORD_POSITIVE_WAVE:
       // turn on triac
-      triacDriver.setpoint = fix16_one;
+      triacDriver.setpoint = sensors.cfg_r_table_setpoints[r_interp_table_index];
       triacDriver.tick();
 
       // Safety check. Restart on out of bounds.
@@ -111,7 +132,7 @@ public:
       // go to data processing
       if (sensors.zero_cross_up || buffer_idx >= calibrator_rl_buffer_length)
       {
-        set_state(CALCULATE);
+        set_state(WAIT_NEGATIVE_WAVE_2);
         break;
       }
 
@@ -120,15 +141,60 @@ public:
       current_buffer[buffer_idx] = fix16_to_float(sensors.current);
 
       buffer_idx++;
+      break;
+
+    case WAIT_NEGATIVE_WAVE_2:
+      triacDriver.tick();
+
+      if (!sensors.zero_cross_down) break;
+
+      set_state(DEMAGNETIZE);
+      break;
+
+    // Open triac on negative wave
+    // with the same setpoint
+    // to demagnetize motor core
+    case DEMAGNETIZE:
+      triacDriver.setpoint = sensors.cfg_r_table_setpoints[r_interp_table_index];
+      triacDriver.tick();
+
+      if (!sensors.zero_cross_up) break;
+
+      set_state(CALCULATE);
 
       break;
 
     // Process collected data. That may take a lot of time, but we don't care
     // about triac at this moment
     case CALCULATE:
-      process_data();
-      set_state(INIT);
+      triacDriver.setpoint = 0;
+      triacDriver.tick();
 
+      r_stability_filter.push(calculate_r());
+
+      if (!r_stability_filter.is_stable())
+      {
+        set_state(R_WAIT_STABLE_LOOP);
+        break;
+      }
+
+      r_interp_result[r_interp_table_index++] = r_stability_filter.average();
+
+      if (r_interp_table_index < CFG_R_INTERP_TABLE_LENGTH)
+      {
+        set_state(R_MEASUE_LOOP);
+        break;
+      }
+
+      // Write result to EEPROM
+      for (int i = 0; i < CFG_R_INTERP_TABLE_LENGTH; i++)
+      {
+        eeprom_float_write(CFG_R_INTERP_TABLE_START_ADDR + i, r_interp_result[i]);
+      }
+
+      set_state(INIT);
+      // Reload sensor's config.
+      sensors.configure();
       return true;
     }
 
@@ -145,15 +211,24 @@ private:
   uint32_t buffer_idx = 0;
   uint32_t zero_cross_down_offset = 0;
 
-  MedianIteratorTemplate<float, 32> median_filter;
+  // Holds current index in R interpolation table
+  int r_interp_table_index = 0;
+  // Holds measured R to write EEPROM all at once
+  fix16_t r_interp_result[CFG_R_INTERP_TABLE_LENGTH];
+
+  StabilityFilterTemplate<F16(5)> r_stability_filter;
 
   enum State {
     INIT,
     WAIT_ZERO_CROSS,
     RECORD_NOIZE,
+    R_MEASUE_LOOP,
+    R_WAIT_STABLE_LOOP,
     WAIT_ZERO_CROSS_2,
     RECORD_POSITIVE_WAVE,
     RECORD_NEGATIVE_WAVE,
+    WAIT_NEGATIVE_WAVE_2,
+    DEMAGNETIZE,
     CALCULATE
   } state = INIT;
 
@@ -182,12 +257,8 @@ private:
     sensors.cfg_min_power_treshold = fix16_from_float(p_sum * 4 / buffer_idx);
   }
 
-  void process_data()
+  float calculate_r()
   {
-    //
-    // Process R
-    //
-
     float p_sum = 0;  // active power
     float i2_sum = 0; // square of current
 
@@ -202,10 +273,7 @@ private:
     // R = P / Current^2
     float R = p_sum / i2_sum;
 
-    eeprom_float_write(CFG_MOTOR_RESISTANCE_ADDR, R);
-
-    // Reload sensor's config.
-    sensors.configure();
+    return R;
   }
 };
 

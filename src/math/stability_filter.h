@@ -47,6 +47,10 @@ public:
     return true;
   }
 
+  fix16_t average() {
+    return (data[0] + data[1] + data [2]) / STABILITY_FILTER_LENGTH;
+  }
+
 private:
   fix16_t data[STABILITY_FILTER_LENGTH];
   int head_idx;

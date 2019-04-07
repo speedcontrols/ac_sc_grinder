@@ -24,6 +24,9 @@ public:
   // 40 kHz
   void tick()
   {
+    // Propagate setpoint to sensors (required to calculate proper resistance)
+    sensors_ptr->in_triac_setpoint = setpoint;
+
     // Poor man zero cross check
     if (sensors_ptr->zero_cross_up || sensors_ptr->zero_cross_down) rearm();
 
