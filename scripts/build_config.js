@@ -26,7 +26,7 @@ function cfg_entry_text(obj, idx) {
   if (!/\./.test(val)) val += '.0';
 
   return `#define CFG_${obj.name.toUpperCase()}_ADDR ${idx}
-#define CFG_${obj.name.toUpperCase()}_DEFAULT ${val}
+#define CFG_${obj.name.toUpperCase()}_DEFAULT ${val}f
 
 `;
 }
@@ -70,6 +70,8 @@ const out = `#ifndef __CONFIG_MAP__
 // Every virtual cell is 4-byte data, float.
 
 ${entries}
+// !!! Check additional mappings in "app.h" to avoid conflicts
+
 #endif
 `;
 
