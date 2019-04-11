@@ -41,16 +41,11 @@ public:
 
   // Config info
   fix16_t cfg_shunt_resistance_inv;
-  fix16_t cfg_rpm_max_inv;
   fix16_t cfg_rekv_to_speed_factor;
 
   // Calibration params. Non needed on real work
   fix16_t cfg_min_power_treshold = 0;
   fix16_t cfg_current_offset = 0;
-
-  // Input from triac driver to reflect triac state. Needed for speed measure
-  // to drop noise. Autoupdated by triac driver.
-  bool in_triac_on = false;
 
   // Input from triac driver to reflect triac setpoint. Needed for speed measure
   // to interpolate motor resistance. Autoupdated by triac driver.
@@ -81,34 +76,14 @@ public:
     if (prev_voltage > 0 && voltage == 0) zero_cross_down = true;
     else zero_cross_down = false;
 
-    // Poor man zero cross check (both up and down)
-    if (zero_cross_up || zero_cross_down)
-    {
-      if (once_zero_crossed) once_period_counted = true;
-
-      once_zero_crossed = true;
-
-      // If full half-period was counted at least once, save number of
-      // ticks in half-period
-      if (once_period_counted) period_in_ticks = phase_counter;
-
-      phase_counter = 0;
-    }
-
     speed_tick();
 
-    phase_counter++;
     prev_voltage = voltage;
-    prev_current = current;
   }
 
   // Load config from emulated EEPROM
   void configure()
   {
-    cfg_rpm_max_inv = fix16_from_float(
-      1.0f / eeprom_float_read(CFG_RPM_MAX_ADDR, CFG_RPM_MAX_DEFAULT)
-    );
-
     // config shunt resistance - in mOhm (divide by 1000)
     // shunt amplifier gain - 50
     cfg_shunt_resistance_inv = fix16_from_float(1.0f /
@@ -286,27 +261,8 @@ private:
     return cfg_r_table[0];
   }
 
-  // Holds number of tick when voltage crosses zero
-  // Used to make the extrapolation during the interval
-  // when voltage is negative
-  uint32_t voltage_zero_cross_tick_count = 0;
-
   // Previous iteration values. Used to detect zero cross.
   fix16_t prev_voltage = 0;
-  fix16_t prev_current = 0;
-
-  uint32_t phase_counter = 0; // increment every tick
-  // Holds the number of ticks per half-period (between two zero crosses)
-  // Will be near 400 for 50 Hz supply voltage or near 333.3333 for 60 Hz
-  // Initial value -1 prevents triac from turning on during first period
-  uint32_t period_in_ticks = 0;
-
-
-  bool once_zero_crossed = false;
-  bool once_period_counted = false;
-
-  // Holds number of ticks since triac is on
-  uint32_t triac_on_counter = 0;
 
   fix16_t p_sum_div_16 = 0;  // active power / 16
   fix16_t i2_sum = 0; // square of current
@@ -329,9 +285,6 @@ private:
       speed = 0;
       return;
     }
-
-    if (in_triac_on) triac_on_counter ++;
-    else triac_on_counter = 0;
 
     // Reset voltage buffer head at zero crossings
     if (zero_cross_down)

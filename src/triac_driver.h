@@ -97,7 +97,6 @@ private:
   // Helpers to switch triac and update related data.
   void inline triac_ignition_on() {
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-    sensors_ptr->in_triac_on = true;
   }
   void inline triac_ignition_off() {
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
@@ -126,8 +125,6 @@ private:
     // Make sure to disable triac signal, if reset (zero cross) happens
     // immediately after triac enabled
     triac_ignition_off();
-
-    sensors_ptr->in_triac_on = false;
   }
 };
 
