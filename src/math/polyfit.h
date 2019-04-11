@@ -30,7 +30,7 @@ void polyfit(int order, float x[], float y[], int len, float result[])
     // Calculate sums of powers of x values
     for (int j = 0; j < len; j++)
     {
-      sums_of_x_powers[i] += pow(x[j], i);
+      sums_of_x_powers[i] += powf(x[j], i);
     }
   }
 
@@ -49,7 +49,7 @@ void polyfit(int order, float x[], float y[], int len, float result[])
     // Calculate x^i*y sums
     for (int j=0; j < len; j++)
     {
-      sums_of_xy_powers[i] += pow(x[j], i) * y[j];
+      sums_of_xy_powers[i] += powf(x[j], i) * y[j];
     }
   }
   // Add x^i*y sums to equations matrix

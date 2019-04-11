@@ -106,12 +106,12 @@ public:
   void configure()
   {
     cfg_rpm_max_inv = fix16_from_float(
-      1.0F / eeprom_float_read(CFG_RPM_MAX_ADDR, CFG_RPM_MAX_DEFAULT)
+      1.0f / eeprom_float_read(CFG_RPM_MAX_ADDR, CFG_RPM_MAX_DEFAULT)
     );
 
     // config shunt resistance - in mOhm (divide by 1000)
     // shunt amplifier gain - 50
-    cfg_shunt_resistance_inv = fix16_from_float(1.0F /
+    cfg_shunt_resistance_inv = fix16_from_float(1.0f /
       (eeprom_float_read(CFG_SHUNT_RESISTANCE_ADDR, CFG_SHUNT_RESISTANCE_DEFAULT)
         * 50
         / 1000)

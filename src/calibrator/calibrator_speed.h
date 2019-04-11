@@ -198,7 +198,7 @@ private:
     float result = coeffs[0];
     for (int i = 1; i <= order; i++)
     {
-      result += pow(x, i) * coeffs[i];
+      result += powf(x, i) * coeffs[i];
     }
     return result;
   }
@@ -223,7 +223,7 @@ private:
     {
       rpms[i] /= scale_factor;
       // clamp possible overflow at high speed
-      if (rpms[i] > 1.0) rpms[i] = 1.0;
+      if (rpms[i] > 1.0f) rpms[i] = 1.0f;
     }
 
     // Find last point in rpm range [0.17..0.4]
@@ -231,7 +231,7 @@ private:
     int last_linear_point = 0;
     for (int i = setpoint_idx - 1; i >= 0; i--)
     {
-      if (rpms[i] <= 0.4)
+      if (rpms[i] <= 0.4f)
       {
         last_linear_point = i;
         break;
@@ -243,7 +243,7 @@ private:
     int first_linear_point = 0;
     for (int i = last_linear_point; i >= 0; i--)
     {
-      if (rpms[i] < 0.17)
+      if (rpms[i] < 0.17f)
       {
         first_linear_point = i + 1;
         break;
@@ -305,7 +305,7 @@ private:
     float middle_point_low_rpm_limit = rpms_approx[4] +
       scale * (setpoints_approx[5] - setpoints_approx[4]);
     float middle_point_high_rpm_limit = rpms_approx[6] -
-      0.5 * scale * (setpoints_approx[6] - setpoints_approx[5]);
+      0.5f * scale * (setpoints_approx[6] - setpoints_approx[5]);
 
     // Correct rpm value of (last - 1) point.
     if (rpms_approx[5] < middle_point_low_rpm_limit)
@@ -367,7 +367,7 @@ private:
           float sc = (rpm - rpms_approx[idx]) / (rpms_approx[idx + 1] - rpms_approx[idx]);
 
           // apply to setpoints interval
-          float result = setpoints_approx[idx] * (1.0 - sc) + setpoints_approx[idx + 1] * sc;
+          float result = setpoints_approx[idx] * (1.0f - sc) + setpoints_approx[idx + 1] * sc;
 
           // store
           eeprom_float_write(CFG_RPM_INTERP_TABLE_START_ADDR + i, result);

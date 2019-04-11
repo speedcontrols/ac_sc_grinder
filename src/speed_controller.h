@@ -83,14 +83,14 @@ public:
   void configure()
   {
     cfg_dead_zone_width_norm = fix16_from_float(eeprom_float_read(CFG_DEAD_ZONE_WIDTH_ADDR,
-       CFG_DEAD_ZONE_WIDTH_DEFAULT) / 100.0F);
+       CFG_DEAD_ZONE_WIDTH_DEFAULT) / 100.0f);
 
     cfg_pid_p = fix16_from_float(eeprom_float_read(CFG_PID_P_ADDR,
        CFG_PID_P_DEFAULT));
 
     // CFG_PID_I in seconds, reverse and divide by tick frequency (40 Hz)
     cfg_pid_i_inv = fix16_from_float(
-      1.0F
+      1.0f
       / eeprom_float_read(CFG_PID_I_ADDR, CFG_PID_I_DEFAULT)
       / APP_PID_FREQUENCY
     );
@@ -104,7 +104,7 @@ public:
     float _rpm_min_limit = eeprom_float_read(CFG_RPM_MIN_LIMIT_ADDR, CFG_RPM_MIN_LIMIT_DEFAULT);
     // Don't allow too small low limit
     // ~ 3000 for 35000 max limit
-    if (_rpm_min_limit < _rpm_max * 0.085) _rpm_min_limit = _rpm_max * 0.085;
+    if (_rpm_min_limit < _rpm_max * 0.085f) _rpm_min_limit = _rpm_max * 0.085f;
 
     cfg_rpm_min_limit_norm = fix16_from_float(_rpm_min_limit / _rpm_max);
 
@@ -124,7 +124,7 @@ public:
       cfg_rpm_volts_correction_table[correction_table_len++] = fix16_from_float(
         eeprom_float_read(
           i + CFG_RPM_INTERP_TABLE_START_ADDR,
-          ((float)i + 1.0) / (CFG_RPM_INTERP_TABLE_LENGTH + 1)
+          ((float)i + 1.0f) / (CFG_RPM_INTERP_TABLE_LENGTH + 1)
         )
       );
     }
