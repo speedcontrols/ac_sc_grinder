@@ -8,6 +8,7 @@
 #include "../speed_controller.h"
 
 #include <limits.h>
+#include <cmath>
 
 extern Sensors sensors;
 extern TriacDriver triacDriver;
@@ -489,7 +490,8 @@ private:
   fix16_t setpoint = 0;
 
   // History of measured speed. Used to detect stable values.
-  fix16_t speed_log[3] = { 0, 0, fix16_minimum };
+  StabilityFilterTemplate<F16(1.0)> speed_tracker;
+
   int measure_attempts = 0;
 
   MedianIteratorTemplate<fix16_t, 32> median_filter;
@@ -576,7 +578,7 @@ private:
   }
 
   void wait_stable_speed_init() {
-    speed_log[2] = fix16_minimum;  // prevent false positives on empty data
+    speed_tracker.reset();
     measure_attempts = 0;
     ticks_cnt = 0;
     median_filter.reset();
@@ -593,9 +595,7 @@ private:
     // ~ 0.25s
     if (ticks_cnt >= 12)
     {
-      speed_log[0] = speed_log[1];
-      speed_log[1] = speed_log[2];
-      speed_log[2] = median_filter.result();
+      speed_tracker.push(median_filter.result());
 
       // if speed stable OR waited > 3 sec => record data
 
@@ -604,18 +604,8 @@ private:
         return;
       }
 
-      // Speed stable if difference <= 5 %.
-      fix16_t a = speed_log[0], b = speed_log[1], c = speed_log[2];
-
-      fix16_t min = (a <= b && a <= c) ? a : ((b <= a && b <= c) ? b : c);
-      fix16_t max = (a >= b && a >= c) ? a : ((b >= a && b >= c) ? b : c);
-
-      fix16_t diff = max - min;
-
-      fix16_t abs_max = max > 0 ? max : - max;
-      fix16_t abs_diff = diff > 0 ? diff : - diff;
-
-      if (abs_diff <= abs_max * 1 / 100) {
+      // Speed stable if difference <= 1 %.
+      if (speed_tracker.is_stable()) {
         set_state(next_state_on_success);
         return;
       }
