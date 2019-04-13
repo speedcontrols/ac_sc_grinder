@@ -1,7 +1,18 @@
 #ifndef __POLYFIT_H__
 #define __POLYFIT_H__
 
-#include <math.h>
+float powf_simple(float x, int y)
+{
+  if (y == 0) return 1;
+  if (y == 1) return x;
+
+  float result = x;
+  y--;
+
+  for (; y > 0; y--) result *= x;
+
+  return result;
+}
 
 // Calculate approximaton polynomial coefficients
 // by Ordinary Least Squares method.
@@ -30,7 +41,7 @@ void polyfit(int order, float x[], float y[], int len, float result[])
     // Calculate sums of powers of x values
     for (int j = 0; j < len; j++)
     {
-      sums_of_x_powers[i] += powf(x[j], i);
+      sums_of_x_powers[i] += powf_simple(x[j], i);
     }
   }
 
@@ -49,7 +60,7 @@ void polyfit(int order, float x[], float y[], int len, float result[])
     // Calculate x^i*y sums
     for (int j=0; j < len; j++)
     {
-      sums_of_xy_powers[i] += powf(x[j], i) * y[j];
+      sums_of_xy_powers[i] += powf_simple(x[j], i) * y[j];
     }
   }
   // Add x^i*y sums to equations matrix

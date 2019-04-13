@@ -7,7 +7,6 @@
 #include "../triac_driver.h"
 #include "../speed_controller.h"
 
-#include <math.h>
 #include <limits.h>
 
 extern Sensors sensors;

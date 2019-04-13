@@ -13,8 +13,6 @@
 #include "../triac_driver.h"
 #include "../speed_controller.h"
 
-#include <math.h>
-
 extern Sensors sensors;
 extern TriacDriver triacDriver;
 extern SpeedController speedController;
@@ -196,9 +194,11 @@ private:
   float polynomial(float x, float coeffs[], int order)
   {
     float result = coeffs[0];
+    float x_pow = 1;
     for (int i = 1; i <= order; i++)
     {
-      result += powf(x, i) * coeffs[i];
+      x_pow *= x;
+      result += x_pow * coeffs[i];
     }
     return result;
   }

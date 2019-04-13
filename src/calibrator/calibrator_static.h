@@ -4,7 +4,6 @@
 // - Measure noise, caused by current OA offset
 // - Calculate motor's R.
 
-#include <algorithm>
 #include <cmath>
 
 #include "../math/fix16_math.h"
