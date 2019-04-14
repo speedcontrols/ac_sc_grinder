@@ -108,7 +108,7 @@ public:
       );
     }
 
-    is_r_calibrated = cfg_r_table[0] == R_CAL_CHECK_MARKER ? false : true;
+    is_r_calibrated = (cfg_r_table[0] == fix16_from_float(R_CAL_CHECK_MARKER)) ? false : true;
   }
 
   // Split raw ADC data by separate buffers
@@ -199,10 +199,10 @@ private:
   void fetch_adc_data()
   {
     // Apply filters
-    uint16_t adc_voltage = truncated_mean(adc_voltage_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
-    uint16_t adc_current = truncated_mean(adc_current_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
-    uint16_t adc_knob = truncated_mean(adc_knob_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
-    uint16_t adc_v_refin =  truncated_mean(adc_v_refin_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
+    uint16_t adc_voltage = (uint16_t)truncated_mean(adc_voltage_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
+    uint16_t adc_current = (uint16_t)truncated_mean(adc_current_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
+    uint16_t adc_knob = (uint16_t)truncated_mean(adc_knob_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
+    uint16_t adc_v_refin = (uint16_t)truncated_mean(adc_v_refin_temp_buf, ADC_FETCH_PER_TICK, F16(1.1));
 
     // Now process the rest...
 

@@ -80,7 +80,7 @@ void app_start()
     }
     else {
       // Force speed to some slow value when R is not calibrated
-      triacDriver.setpoint = 0.2;
+      triacDriver.setpoint = F16(0.2);
     }
 
     triacDriver.tick();

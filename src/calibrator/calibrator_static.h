@@ -167,7 +167,7 @@ public:
       triacDriver.setpoint = 0;
       triacDriver.tick();
 
-      r_stability_filter.push(calculate_r());
+      r_stability_filter.push(fix16_from_float(calculate_r()));
 
       if (!r_stability_filter.is_stable())
       {
@@ -186,7 +186,10 @@ public:
       // Write result to EEPROM
       for (int i = 0; i < CFG_R_INTERP_TABLE_LENGTH; i++)
       {
-        eeprom_float_write(CFG_R_INTERP_TABLE_START_ADDR + i, r_interp_result[i]);
+        eeprom_float_write(
+          CFG_R_INTERP_TABLE_START_ADDR + i,
+          fix16_to_float(r_interp_result[i])
+        );
       }
 
       set_state(INIT);
@@ -249,9 +252,9 @@ private:
       p_sum += voltage_buffer[i] * current_buffer[i];
     }
 
-    sensors.cfg_current_offset = fix16_from_float(i_sum / buffer_idx);
+    sensors.cfg_current_offset = fix16_from_float(i_sum / (float)buffer_idx);
     // Set power treshold 4x of noise value
-    sensors.cfg_min_power_treshold = fix16_from_float(p_sum * 4 / buffer_idx);
+    sensors.cfg_min_power_treshold = fix16_from_float(p_sum * 4 / (float)buffer_idx);
   }
 
   float calculate_r()

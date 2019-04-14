@@ -21,8 +21,8 @@ extern Sensors sensors;
 #define IS_KNOB_LOW(val)  (val < KNOB_TRESHOLD)
 #define IS_KNOB_HIGH(val) (val >= KNOB_TRESHOLD)
 
-constexpr int knob_wait_min = APP_TICK_FREQUENCY * 0.2;
-constexpr int knob_wait_max = APP_TICK_FREQUENCY * 1.0;
+constexpr int knob_wait_min = (int)(APP_TICK_FREQUENCY * 0.2f);
+constexpr int knob_wait_max = (int)(APP_TICK_FREQUENCY * 1.0f);
 
 
 class CalibratorWaitKnobDial

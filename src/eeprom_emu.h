@@ -57,9 +57,10 @@ private:
         oldVal = newVal;
         flash.save(values[0], tuples);
       } else if (fill < NumVars) {
-        tuples[fill].key = index;
+        tuples[fill].key = (uint16_t)index;
         tuples[fill].val = newVal;
-        map[index] = fill++;
+        map[index] = (uint8_t)fill;
+        fill++;
         flash.save(values[0], tuples);
       } else {
         combineChanges();
@@ -80,7 +81,7 @@ private:
       uint16_t key = tuples[fill].key;
       if (key >= NumVars)
         break;
-      map[key] = fill;
+      map[key] = (uint8_t)fill;
     }
     return true;
   }

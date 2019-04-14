@@ -30,7 +30,6 @@ public:
     case INIT:
       // Reset scaling factor
       sensors.cfg_rekv_to_speed_factor = fix16_one;
-      setpoint = 0.05;
       setpoint_idx = 0;
 
       measure_attempts = 0;

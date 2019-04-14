@@ -46,8 +46,7 @@ extern SpeedController speedController;
 // It will cross SPEED_IDEAL_THRESHOLD
 // at ideal time = measured time * start_stop_adjust
 static const fix16_t start_stop_adjust = fix16_from_float(
-  log(SPEED_IDEAL_THRESHOLD) /
-  log(SPEED_MEASURE_THRESHOLD)
+  (float)(log(SPEED_IDEAL_THRESHOLD) / log(SPEED_MEASURE_THRESHOLD))
 );
 
 // Frequency scale for data save when measure start/stop time.
@@ -539,7 +538,7 @@ private:
     {
       if (start_data[i] > speed_at_measure_threshold)
       {
-        start_time_measured = fix16_from_float((float)i / start_len * start_time_ticks / APP_TICK_FREQUENCY);
+        start_time_measured = fix16_from_float((float)(i * start_time_ticks) / (float)(start_len *  APP_TICK_FREQUENCY));
         break;
       }
     }
@@ -560,7 +559,7 @@ private:
     {
       if (stop_data[i] < speed_at_measure_threshold)
       {
-        stop_time_measured = fix16_from_float(float(i) / stop_len * stop_time_ticks / APP_TICK_FREQUENCY);
+        stop_time_measured = fix16_from_float((float)(i * stop_time_ticks) / (float)(stop_len  * APP_TICK_FREQUENCY));
         break;
       }
     }

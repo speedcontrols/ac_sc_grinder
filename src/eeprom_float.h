@@ -87,7 +87,7 @@ void eeprom_float_write(int addr, float val)
   x.f = val;
   uint32_t data = x.i;
 
-  eeprom[addr * 3 + 1] = data >> 16;
+  eeprom[addr * 3 + 1] = (uint16_t)(data >> 16);
   eeprom[addr * 3 + 2] = data & 0xFFFF;
   eeprom[addr * 3] = EEPROM_COMMIT_MARK;
 }
