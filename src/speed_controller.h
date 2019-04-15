@@ -161,10 +161,10 @@ private:
   // Apply min/max limits to knob output
   fix16_t normalize_knob(fix16_t knob)
   {
-    if (in_knob < cfg_dead_zone_width_norm) return 0;
+    if (knob < cfg_dead_zone_width_norm) return 0;
 
     return fix16_mul(
-      (in_knob - cfg_dead_zone_width_norm),
+      (knob - cfg_dead_zone_width_norm),
       knob_norm_coeff
     ) + cfg_rpm_min_limit_norm;
   }

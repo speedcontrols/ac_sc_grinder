@@ -28,11 +28,13 @@ volatile uint32_t adc_data_offset = 0;
 
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* AdcHandle)
 {
+  (void)(AdcHandle);
   adc_data_ready = true;
   adc_data_offset = 0;
 }
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle)
 {
+  (void)(AdcHandle);
   adc_data_ready = true;
   adc_data_offset = ADC_FETCH_PER_TICK * ADC_CHANNELS_COUNT;
 }

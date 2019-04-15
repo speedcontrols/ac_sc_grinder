@@ -185,6 +185,8 @@ void SystemClock_Config(void)
 void _Error_Handler(char *file, int line)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
+  (void)(file);
+  (void)(line);
   /* User can add his own implementation to report the HAL error return state */
   while(1)
   {
