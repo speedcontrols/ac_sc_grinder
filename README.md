@@ -3,10 +3,13 @@ Grinder speed control with stable RPM
 
 [![Gitter chat](https://badges.gitter.im/speedcontrols/ac_sc_grinder.svg)](https://gitter.im/speedcontrols/ac_sc_grinder)
 
-__WORK IN PROGRESS !!!__
-
 > Advanced speed control for grinder AC brushed motor. With RPM stabilization
 > via Back EMF measure. Replacement for default board.
+
+[Video](https://youtu.be/bOrjzO8rmQk):
+
+[![Video](https://i.ytimg.com/vi/bOrjzO8rmQk/hqdefault.jpg)](https://youtu.be/bOrjzO8rmQk)
+
 
 Notes! Due size restrictions, it's impossible to create universal PCB.
 We prepeared PCB for `Hilda 180W` - it's very popular and cheap. Boards for
