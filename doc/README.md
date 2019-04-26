@@ -39,6 +39,29 @@ when current crosses zero.
 
 [![motor resistance formula](http://mathurl.com/y83s3tu6.png)](http://mathurl.com/y83s3tu6)
 
+
+**Compensating armature frequency-related losses**
+
+In ideal world, equations above should work. But in reality R is not constant
+and not linear it - depends on triac phase. Motor has additional losses (caused
+by eddy currents) when "frequency" rises. Measured R at zero phase is 1.5x
+smaller than at full phase.
+
+So, we have to measure resistance at multiple phases and build interpolation
+table. Then, to calculate speed - use interpolated value, appropriate to current
+triac phase. This helps a lot to calculate small speeds right. In theory, losses
+may depend on motor load, but described compensation is enough for good result.
+
+Note, after each "positive" measuring pulse it worth to make negative pulse to
+demagnetize armature. Also, it worth to make small pause between measurements,
+to keep rotor stopped.
+
+It's enough to measure R at 0%-50% of "speed" (triac phase). On high speed R
+does not affect calculated speed too much. Measure at 100% pulse can make motor
+rotate and return wrong value. So, we measure only in 0%-50% range and
+propagate last value to max (100%) speed.
+
+
 **Implementation notes**
 
 It's important to count sum until current become zero, not until voltage become
@@ -51,6 +74,9 @@ recorded full wave (both voltage and current) for simplicity.
 
 Also, you may have overflow with fixed point math. Since performance is not
 critical with recorded data, using `float` types is preferable.
+
+Signal may be noisy at short pulses. To filter accidental peaks, measure
+multiple times, until 3 consecutive results become stable.
 
 
 ### Motor's RPM/volts response linearization & scaling.

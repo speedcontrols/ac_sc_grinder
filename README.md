@@ -32,9 +32,9 @@ other grinder models are left to volunteers.
       for stm32 devices (only 2$).
     - [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any
       other acrylic protective coating. We strongly recommend to protect PCB
-      from aspirated dust
+      from aspirated dust.
     - [male](https://www.aliexpress.com/item/100pcs-2-8-Inserts-Plug-Spring-Terminal-PCB-Solder-lug-thickness-0-8-one-legs-PCB/32702011692.html) &
-      [female](https://www.aliexpress.com/item/100pcs-lot-2-8-insulated-terminal-with-0-5-0-8-male-insert-brass-color-connectors/32593170276.html) 2.8mm power terminals (optional - you can solder wires directly)
+      [female](https://www.aliexpress.com/item/100pcs-lot-2-8-insulated-terminal-with-0-5-0-8-male-insert-brass-color-connectors/32593170276.html) 2.8mm power terminals (optional - you can solder wires directly).
 4. Extract some components from native grinder board:
     - Speed potentiometer with wheel.
     - Terminal pins for motor contacts.
@@ -48,6 +48,17 @@ other grinder models are left to volunteers.
 2. Flash firmware.
 3. Test that it works.
 4. Cover PCB with protective coating.
+
+**IMPORTANT**. When you turn device on after flash, motor will run at slow speed
+and will not react on knob. That means, you should run self-calibration.
+
+To run calibration:
+
+- Move knob to zero.
+- Move knob shortly up-and-down 3 times (in 3 seconds).
+- Wait couple of minutes until magic finishes and motor stops. Be patient.
+
+You can rerun calibration anytime, but that's usually required only once.
 
 
 ## How to flash firmware
@@ -66,11 +77,13 @@ while AC plug in power socket, your USB interface may be damaged!
 4. Open this project in installed IDE.
 5. Open `PlatformIO` -> `Terminal` -> `New Terminal`
 
-Now type this commands in terminat window:
+Now type this command in terminal window and press "enter":
 
 ```bash
 pio run --target upload
 ```
+
+Don't forget to run calibration after firmware upload.
 
 
 ## Development
