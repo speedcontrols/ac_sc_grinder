@@ -45,8 +45,9 @@ other grinder models are left to volunteers.
 ## Building hardware
 
 1. Assemble PCB.
-2. Flash firmware.
-3. Test that it works.
+2. Flash firmware (see next chapter).
+3. Assemble device with new board, run self-calibration and check everything
+   works as expected.
 4. Cover PCB with protective coating.
 
 **IMPORTANT**. When you turn device on after flash, motor will run at slow speed
@@ -58,7 +59,7 @@ To run calibration:
 - Move knob shortly up-and-down 3 times (in 3 seconds).
 - Wait couple of minutes until magic finishes and motor stops. Be patient.
 
-You can rerun calibration anytime, but that's usually required only once.
+Calibration is required only once.
 
 
 ## How to flash firmware
@@ -67,23 +68,18 @@ You can rerun calibration anytime, but that's usually required only once.
 via grinder switch is not enougth. If you plug programmator into computer
 while AC plug in power socket, your USB interface may be damaged!
 
-1. Install PlatformIO IDE. Follow instructions [here](http://docs.platformio.org/en/latest/ide/pioide.html).
-   We use PIO for Atom, but PIO for VSCode should be ok too.
-   - Make sure you've [installed](http://docs.platformio.org/en/latest/installation.html#troubleshooting)
-   udev rules (linux) or device drivers (windows).
-2. Clone this repo or download via zip archive.
-3. Optionally, edit defaults in `/src/config_map.h`, but defaults should be ok.
-   We recommend to skip this step.
-4. Open this project in installed IDE.
-5. Open `PlatformIO` -> `Terminal` -> `New Terminal`
+1. Install [VS Code](https://code.visualstudio.com/).
+2. Clone this repo or download via zip archive and unpack somewhere.
+3. Open folder with project AND after VS Code suggests to install plugins - agree
+   with everything. That should install platformio, compilers and flashers.
+4. Make sure you installed & configured `ST-link/V2` drivers:
+   - [Linux](http://docs.platformio.org/en/latest/installation.html#troubleshooting)
+     instructions (how to configure udev rules).
+   - [Windows](https://www.st.com/en/development-tools/stsw-link009.html) drivers.
+5. Run flasher via VS Code menu: `Terminal` -> `Run Task...` -> `PlatformIO: Upload`,
+   and wait until complete.
 
-Now type this command in terminal window and press "enter":
-
-```bash
-pio run --target upload
-```
-
-Don't forget to run calibration after firmware upload.
+Don't forget to run calibration after firmware upload!
 
 
 ## Development
