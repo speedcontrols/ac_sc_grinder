@@ -1,3 +1,4 @@
+.pio
 .pioenvs
 .piolibdeps
 .clang_complete
@@ -9,3 +10,4 @@ package-lock.json
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/settings.json
+.vscode/ipch
