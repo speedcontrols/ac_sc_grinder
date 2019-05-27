@@ -18,8 +18,8 @@ other grinder models are left to volunteers.
 
 ### Required components
 
-1. [Hilda 180W](https://www.aliexpress.com/wholesale?SearchText=hilda+180w).
-   Regulator is not restricted for this tool, but existing PCB layout is for
+1. [Hilda 180W](https://www.aliexpress.com/af/hilda-180w.html?SortType=total_tranpro_desc).
+   Project is not limited to this device, but existing PCB layout is for
    this grinder model. Also, firmware config defaults are for it's motor's power.
 2. Go to [EasyEda project page](https://easyeda.com/speed/AC-speed-control-for-grinder)
     - Order PCB
@@ -28,11 +28,11 @@ other grinder models are left to volunteers.
       may find nice to buy all details in one place and join delivery to
       single package.
 3. Get additional details, not included into BOM:
-    - [Cheap stlink programmer](https://www.aliexpress.com/af/stlink-stm32.html?jump=afs)
+    - [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc)
       for stm32 devices (only 2$).
     - [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any
-      other acrylic protective coating. We strongly recommend to protect PCB
-      from aspirated dust.
+      other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer)
+      (liquid or spray). We strongly recommend to protect PCB from aspirated dust.
     - [male](https://www.aliexpress.com/item/100pcs-2-8-Inserts-Plug-Spring-Terminal-PCB-Solder-lug-thickness-0-8-one-legs-PCB/32702011692.html) &
       [female](https://www.aliexpress.com/item/100pcs-lot-2-8-insulated-terminal-with-0-5-0-8-male-insert-brass-color-connectors/32593170276.html) 2.8mm power terminals (optional - you can solder wires directly).
 4. Extract some components from native grinder board:
@@ -48,7 +48,8 @@ other grinder models are left to volunteers.
 2. Flash firmware (see next chapter).
 3. Assemble device with new board, run self-calibration and check everything
    works as expected.
-4. Cover PCB with protective coating.
+4. Cover PCB with insulating lacquer, to protect it from aspirated dust (we
+   strongly recommend to not ignore this step).
 
 **IMPORTANT**. When you turn device on after flash, motor will run at slow speed
 and will not react on knob. That means, you should run self-calibration.
