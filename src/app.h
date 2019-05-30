@@ -21,7 +21,7 @@
 #define CFG_RPM_INTERP_TABLE_LENGTH 16
 
 #define CFG_R_INTERP_TABLE_START_ADDR 26
-#define CFG_R_INTERP_TABLE_LENGTH 10
+#define CFG_R_INTERP_TABLE_LENGTH 7
 
 extern void app_start();
 

@@ -177,6 +177,15 @@ public:
 
       r_interp_result[r_interp_table_index++] = r_stability_filter.average();
 
+      // Don't measure last point with setpoint = 1.0,
+      // duplicate value from setpoint = 0.6
+      // Measurement with setpoint = 1.0 is not accurate
+      // because it causes motor to rotate.
+      if (r_interp_table_index == (CFG_R_INTERP_TABLE_LENGTH - 1))
+      {
+        r_interp_result[r_interp_table_index++] = r_interp_result[CFG_R_INTERP_TABLE_LENGTH - 2];
+      }
+
       if (r_interp_table_index < CFG_R_INTERP_TABLE_LENGTH)
       {
         set_state(R_MEASUE_LOOP);

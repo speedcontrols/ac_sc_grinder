@@ -52,16 +52,13 @@ public:
   fix16_t in_triac_setpoint = 0;
 
   fix16_t cfg_r_table_setpoints[CFG_R_INTERP_TABLE_LENGTH] = {
-    F16(1.0 / 10.0),
-    F16(1.0 / 9.0),
-    F16(1.0 / 8.0),
-    F16(1.0 / 7.0),
-    F16(1.0 / 6.0),
-    F16(1.0 / 5.0),
-    F16(1.0 / 4.0),
-    F16(1.0 / 3.0),
-    F16(1.0 / 2.0),
-    F16(1.0 / 1.0),
+    F16(0.1),
+    F16(0.15),
+    F16(0.2),
+    F16(0.3),
+    F16(0.4),
+    F16(0.6),
+    F16(1.0),
   };
 
   // Should be called with 40kHz frequency
