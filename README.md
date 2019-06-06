@@ -6,9 +6,9 @@ Grinder speed control with stable RPM
 > Advanced speed control for grinder AC brushed motor. With RPM stabilization
 > via Back EMF measure. Replacement for default board.
 
-[Video](https://youtu.be/bOrjzO8rmQk):
+[Video](https://youtu.be/6eNhbyeh3mg):
 
-[![Video](https://i.ytimg.com/vi/bOrjzO8rmQk/hqdefault.jpg)](https://youtu.be/bOrjzO8rmQk)
+[![Video](https://i.ytimg.com/vi/6eNhbyeh3mg/hqdefault.jpg)](https://youtu.be/6eNhbyeh3mg)
 
 
 Notes! Due size restrictions, it's impossible to create universal PCB.
