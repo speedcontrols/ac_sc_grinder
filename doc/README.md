@@ -5,6 +5,12 @@ replaced by sums:
 
 [![power balance equation](http://mathurl.com/yallc7kg.png)](http://mathurl.com/yallc7kg)
 
+<!--
+$\int_{0}^{T} Voltage(t)\cdot Current(t)\cdot dt = R_\Sigma \int_{0}^{T} Current^2(t)\cdot dt\\
+\\
+\sum_{0}^{T} Voltage\cdot Current = R_\Sigma \sum_{0}^{T} Current^2$
+-->
+
 R<sub>&Sigma;</sub> - equivalent summary resistance of motor circuit.
 
 Sums must be calculated from one zero-crossing of current to next zero-crossing of current.
@@ -12,6 +18,15 @@ Sums must be calculated from one zero-crossing of current to next zero-crossing 
 The motor speed can be calculated as follows:
 
 [![motor speed formula](http://mathurl.com/y7m5ccnq.png)](http://mathurl.com/y7m5ccnq)
+
+<!--
+$R_\Sigma = R_{ekv} + R_{motor}\\
+\\
+R_{ekv} = \frac{\sum_{0}^{T} Voltage\cdot Current}{\sum_{0}^{T} Current^2} - R_{motor}\\
+\\
+\\
+RPM = \frac{R_{ekv}}{K}$
+-->
 
 - R<sub>ekv</sub> - equivalent resistance which is created by the back-EMF.
 - R<sub>motor</sub> - motor resistance in Ohms.
@@ -34,11 +49,20 @@ on motor resistance. Integrals can be replaced by sums.
 
 [![motor power balance equations](http://mathurl.com/ybwtldyx.png)](http://mathurl.com/ybwtldyx)
 
+<!--
+$\int_{0}^{t} Current*Voltage*dt = R *\int_{0}^{t} Current^2 *dt \\
+\\
+\sum_{0}^{N} (Current*Voltage) = R * \sum_{0}^{N} (Current^2)$
+-->
+
 Count all ticks from triac opening to moment
 when current crosses zero.
 
 [![motor resistance formula](http://mathurl.com/y83s3tu6.png)](http://mathurl.com/y83s3tu6)
 
+<!--
+$R = \frac{\sum_{0}^{N} (Current*Voltage)}{\sum_{0}^{N} (Current^2)}$
+-->
 
 **Compensating armature frequency-related losses**
 
