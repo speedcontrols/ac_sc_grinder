@@ -1,4 +1,4 @@
-Grinder speed control with stable RPM
+Grinder speed control with stable RPM <!-- omit in toc -->
 =====================================
 
 [![Gitter chat](https://badges.gitter.im/speedcontrols/ac_sc_grinder.svg)](https://gitter.im/speedcontrols/ac_sc_grinder)
@@ -6,17 +6,22 @@ Grinder speed control with stable RPM
 > Advanced speed control for grinder AC brushed motor. With RPM stabilization
 > via Back EMF measure. Replacement for default board.
 
-[Video](https://youtu.be/6eNhbyeh3mg):
+- [Required components](#required-components)
+- [Building hardware](#building-hardware)
+- [How to flash firmware](#how-to-flash-firmware)
+- [Development](#development)
+
+Video:
 
 [![Video](https://i.ytimg.com/vi/6eNhbyeh3mg/hqdefault.jpg)](https://youtu.be/6eNhbyeh3mg)
 
 
-Notes! Due size restrictions, it's impossible to create universal PCB.
+Note! Due size restrictions, it's impossible to create universal PCB.
 We prepeared PCB for `Hilda 180W` - it's very popular and cheap. Boards for
 other grinder models are left to volunteers.
 
 
-### Required components
+## Required components
 
 1. [Hilda 180W](https://www.aliexpress.com/af/hilda-180w.html?SortType=total_tranpro_desc).
    Project is not limited to this device, but existing PCB layout is for
@@ -29,7 +34,8 @@ other grinder models are left to volunteers.
       single package.
 3. Get additional details, not included into BOM:
     - [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc)
-      for stm32 devices (only 2$).
+      for stm32 devices (only 2$, or buy at [LCSC](https://lcsc.com/search?q=st-link)
+      with other components).
     - [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any
       other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer)
       (liquid or spray). We strongly recommend to protect PCB from aspirated dust.
@@ -85,15 +91,10 @@ Don't forget to run calibration after firmware upload!
 
 ## Development
 
-Everything is done in `PlatformIO`. If you wish to update conig and regenerate
-headers, you may need `node.js` and run `npm run config`.
+Everything is done in `PlatformIO`. If you wish to update yaml config and
+regenerate headers, you may need `node.js` and run `npm run config`.
 
 Note, this PCB has no AC isolation! That's ok for normal operation, because
 board is placed inside isolated case. But if you plan to debug firmware via USB,
 you MUST use [USB isolator](https://ru.aliexpress.com/wholesale?SearchText=USB+isolator)
 module.
-
-
-## License
-
-MIT.
