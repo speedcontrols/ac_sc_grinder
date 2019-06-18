@@ -6,15 +6,19 @@ Grinder speed control with stable RPM <!-- omit in toc -->
 > Advanced speed control for grinder AC brushed motor. With RPM stabilization
 > via Back EMF measure. Replacement for default board.
 
-- [Required components](#required-components)
-- [Building hardware](#building-hardware)
-- [How to flash firmware](#how-to-flash-firmware)
-- [Development](#development)
+- [Required components](#Required-components)
+- [Building hardware](#Building-hardware)
+- [How to flash firmware](#How-to-flash-firmware)
+- [Development](#Development)
 
 Video:
 
 [![Video](https://i.ytimg.com/vi/6eNhbyeh3mg/hqdefault.jpg)](https://youtu.be/6eNhbyeh3mg)
 
+Schematic/PCB:
+
+- [EasyEda project page](https://easyeda.com/speed/AC-speed-control-for-grinder) -
+  you can order PCB & all components there in couple of clicks!
 
 Note! Due size restrictions, it's impossible to create universal PCB.
 We prepeared PCB for `Hilda 180W` - it's very popular and cheap. Boards for
@@ -39,8 +43,8 @@ other grinder models are left to volunteers.
     - [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any
       other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer)
       (liquid or spray). We strongly recommend to protect PCB from aspirated dust.
-    - [male](https://www.aliexpress.com/item/100pcs-2-8-Inserts-Plug-Spring-Terminal-PCB-Solder-lug-thickness-0-8-one-legs-PCB/32702011692.html) &
-      [female](https://www.aliexpress.com/item/100pcs-lot-2-8-insulated-terminal-with-0-5-0-8-male-insert-brass-color-connectors/32593170276.html) 2.8mm power terminals (optional - you can solder wires directly).
+    - [male](https://www.aliexpress.com/item/-/32700932502.html) &
+      [female](https://www.aliexpress.com/item/-/32593170276.html) 2.8*0.5mm power terminals (optional - you can solder wires directly).
 4. Extract some components from native grinder board:
     - Speed potentiometer with wheel.
     - Terminal pins for motor contacts.
