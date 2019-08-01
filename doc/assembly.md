@@ -1,13 +1,13 @@
 Device assembly <!-- omit in toc -->
 ===============
 
-- [Required components](#Required-components)
-- [Extract some parts from original board](#Extract-some-parts-from-original-board)
-- [Solder PCB top and bottom](#Solder-PCB-top-and-bottom)
-- [Cleanup PCB](#Cleanup-PCB)
-- [Install the rest and attach wires](#Install-the-rest-and-attach-wires)
-- [Upload firmware and test](#Upload-firmware-and-test)
-- [Cover PCB with protective coating](#Cover-PCB-with-protective-coating)
+- [Required components](#required-components)
+- [Extract some parts from original board](#extract-some-parts-from-original-board)
+- [Solder PCB top and bottom](#solder-pcb-top-and-bottom)
+- [Cleanup PCB](#cleanup-pcb)
+- [Install the rest and attach wires](#install-the-rest-and-attach-wires)
+- [Upload firmware and test](#upload-firmware-and-test)
+- [Cover PCB with protective coating](#cover-pcb-with-protective-coating)
 
 
 ## Required components
@@ -19,6 +19,15 @@ Device assembly <!-- omit in toc -->
 3 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Required to upload firmware, only 2$. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
 4 | PCB protective coating | [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer).
 5 | [Male](https://www.aliexpress.com/item/-/32700932502.html) & [female](https://www.aliexpress.com/item/-/32593170276.html) 2.8x0.5mm power terminals | Optional. You can solder power wires directly.
+
+
+**Note on order at LCSC.** When you use "Order at LCSC" button to import BOM,
+check "Part Match Confidence" column to filter garbage. Correct items usually
+have 100% match confidence value.
+
+![BOM import match confidence](./images/lcsc_import.png)
+
+Remove items `PIN 1 MM`, `PIN 3*0.5 MM` & `HILDA POTENTIOMETER`.
 
 
 ## Extract some parts from original board
