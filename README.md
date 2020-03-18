@@ -1,6 +1,7 @@
 Grinder speed control with stable RPM <!-- omit in toc -->
 =====================================
 
+[![Build Status](https://travis-ci.org/speedcontrols/ac_sc_grinder.svg?branch=master)](https://travis-ci.org/speedcontrols/ac_sc_grinder)
 [![Gitter chat](https://badges.gitter.im/speedcontrols/ac_sc_grinder.svg)](https://gitter.im/speedcontrols/ac_sc_grinder)
 
 > Advanced speed control for grinder's AC brushed motor. With RPM stabilization

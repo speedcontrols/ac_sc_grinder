@@ -3,16 +3,10 @@
 
 #include "../math/fix16_math.h"
 #include "../app.h"
-#include "../sensors.h"
-#include "../triac_driver.h"
-#include "../speed_controller.h"
 
 #include <limits.h>
 #include <cmath>
-
-extern Sensors sensors;
-extern TriacDriver triacDriver;
-extern SpeedController speedController;
+#include "etl/cyclic_value.h"
 
 #define MIN_P 1.0
 #define INIT_P_ITERATION_STEP 4.0
@@ -67,119 +61,109 @@ static const fix16_t start_stop_adjust = fix16_from_float(
 class CalibratorPID {
 public:
 
-  bool tick() {
-    switch (state)
-    {
-      // Before start time measure
-      // motor must run at steady low speed
-      case INIT_WAIT_STABLE_LOW_SPEED:
-        setpoint = F16(LOW_SPEED_SETPOINT);
+    bool tick(io_data_t &io_data) {
+        YIELDABLE;
 
-        triacDriver.setpoint = setpoint;
+        //
+        // Before start time measure motor must run at steady low speed
+        //
 
-        // Init local iteration vars.
-        wait_stable_speed_init();
-        set_state(WAIT_STABLE_LOW_SPEED);
+        io.setpoint = F16(LOW_SPEED_SETPOINT);
+        speed_tracker.reset();
 
-      case WAIT_STABLE_LOW_SPEED:
-        triacDriver.tick();
-        if (!sensors.zero_cross_up) break;
+        while (!speed_tracker.is_stable_or_exceeded())
+        {
+            YIELD(false);
+            if (!io_data.zero_cross_up) continue;
 
-        wait_stable_speed(sensors.speed, INIT_MEASURE_START_TIME, INT_MAX);
-        break;
+            speed_tracker.push(meter.speed);
+        }
 
-      case INIT_MEASURE_START_TIME:
-        setpoint = F16(HIGH_SPEED_SETPOINT);
+        //
+        // Apply high speed power and record process of speed rise,
+        // until speed become stable
+        //
 
-        triacDriver.setpoint = setpoint;
-
-        // Init local iteration vars.
-        wait_stable_speed_init();
+        io.setpoint = F16(HIGH_SPEED_SETPOINT);
+        speed_tracker.reset();
         speed_data_idx = 0;
         start_time_ticks = 0;
-        start_stop_scaler_cnt = 0;
-        set_state(WAIT_STABLE_SPEED_UP);
+        start_stop_scaler_cyclic_cnt = 0;
 
-      case WAIT_STABLE_SPEED_UP:
-        triacDriver.tick();
-        start_time_ticks++;
-
-        if (!sensors.zero_cross_up) break;
-
-        if (speed_data_idx < speed_data_length)
+        while (!speed_tracker.is_stable_or_exceeded())
         {
-          // Apply lowpass filtration
-          filtered_speed = fix16_mul(
-            F16(LOWPASS_FILTER_ALPHA),
-            sensors.speed
-          ) + fix16_mul(
-            F16(1.0 - LOWPASS_FILTER_ALPHA),
-            (speed_data_idx == 0) ? sensors.speed : filtered_speed
-          );
+            YIELD(false);
+            start_time_ticks++;
+            if (!io_data.zero_cross_up) continue;
 
-          if (start_stop_scaler_cnt == 0) {
-            start_speed_data[speed_data_idx++] = filtered_speed;
-          }
+            if (speed_data_idx < speed_data_length)
+            {
+                // Apply lowpass filtration
+                filtered_speed = fix16_mul(
+                    F16(LOWPASS_FILTER_ALPHA),
+                    meter.speed
+                ) + fix16_mul(
+                    F16(1.0 - LOWPASS_FILTER_ALPHA),
+                    (speed_data_idx == 0) ? meter.speed : filtered_speed
+                );
 
-          start_stop_scaler_cnt++;
-          if (start_stop_scaler_cnt == SPEED_DATA_SAVE_RATIO) start_stop_scaler_cnt = 0;
+                if (start_stop_scaler_cyclic_cnt++ == 0) {
+                    start_speed_data[speed_data_idx++] = filtered_speed;
+                }
+            }
+
+            speed_tracker.push(meter.speed);
         }
 
-        wait_stable_speed(sensors.speed, INIT_MEASURE_STOP_TIME, INT_MAX);
-
-        break;
-
-      case INIT_MEASURE_STOP_TIME:
         start_speed_data_len = speed_data_idx;
 
-        setpoint = F16(LOW_SPEED_SETPOINT);
-        triacDriver.setpoint = setpoint;
+        //
+        // Now measure stop time (reverse process)
+        //
 
-        // Init local iteration vars.
-        wait_stable_speed_init();
+        io.setpoint = F16(LOW_SPEED_SETPOINT);
+        speed_tracker.reset();
         speed_data_idx = 0;
         stop_time_ticks = 0;
-        start_stop_scaler_cnt = 0;
-        set_state(WAIT_STABLE_SPEED_DOWN);
+        start_stop_scaler_cyclic_cnt = 0;
 
-      case WAIT_STABLE_SPEED_DOWN:
-        triacDriver.tick();
-        stop_time_ticks++;
-
-        if (!sensors.zero_cross_up) break;
-
-        if (speed_data_idx < speed_data_length)
+        while (!speed_tracker.is_stable_or_exceeded())
         {
-          // Apply lowpass filtration
-          filtered_speed = fix16_mul(
-            F16(LOWPASS_FILTER_ALPHA),
-            sensors.speed
-          ) + fix16_mul(
-            F16(1.0 - LOWPASS_FILTER_ALPHA),
-            (speed_data_idx == 0) ? sensors.speed : filtered_speed
-          );
+            YIELD(false);
+            stop_time_ticks++;
+            if (!io_data.zero_cross_up) continue;
 
-          if (start_stop_scaler_cnt == 0) {
-            stop_speed_data[speed_data_idx++] = filtered_speed;
-          }
+            if (speed_data_idx < speed_data_length)
+            {
+                // Apply lowpass filtration
+                filtered_speed = fix16_mul(
+                    F16(LOWPASS_FILTER_ALPHA),
+                    meter.speed
+                ) + fix16_mul(
+                    F16(1.0 - LOWPASS_FILTER_ALPHA),
+                    (speed_data_idx == 0) ? meter.speed : filtered_speed
+                );
 
-          start_stop_scaler_cnt++;
-          if (start_stop_scaler_cnt == SPEED_DATA_SAVE_RATIO) start_stop_scaler_cnt = 0;
+                if (start_stop_scaler_cyclic_cnt++ == 0) {
+                    stop_speed_data[speed_data_idx++] = filtered_speed;
+                }
+            }
 
+            speed_tracker.push(meter.speed);
         }
 
-        wait_stable_speed(sensors.speed, INIT_P_CALIBRATION, INT_MAX);
-
-        break;
-
-      case INIT_P_CALIBRATION:
         stop_speed_data_len = speed_data_idx;
+
         motor_start_stop_time = calculate_start_stop_time(
-          start_speed_data_len,
-          start_speed_data,
-          stop_speed_data_len,
-          stop_speed_data
+            start_speed_data_len,
+            start_speed_data,
+            stop_speed_data_len,
+            stop_speed_data
         );
+
+        //
+        // Pick P coeff value by half cut method
+        //
 
         iterations_count = 0;
         iteration_step = F16(INIT_P_ITERATION_STEP);
@@ -189,110 +173,100 @@ public:
         // TODO - Measure period duration for correct operation at 50 and 60 Hz
         measure_amplitude_ticks_max = fix16_to_int(motor_start_stop_time * 50);
 
-        speedController.cfg_pid_i_inv = fix16_div(
-          F16(1.0 / APP_PID_FREQUENCY),
-          motor_start_stop_time
+        // Set PID_I to max reasonable value
+        regulator.cfg_pid_i_inv = fix16_div(
+            F16(1.0 / APP_PID_FREQUENCY),
+            motor_start_stop_time
         );
 
-        set_state(WAIT_STABLE_SPEED_P_CALIBRATION_START);
-
-      case WAIT_STABLE_SPEED_P_CALIBRATION_START:
-        wait_stable_speed_init();
-        set_state(WAIT_STABLE_SPEED_P_CALIBRATION_CYCLE);
-
-      case WAIT_STABLE_SPEED_P_CALIBRATION_CYCLE:
-        // Wait for stable speed with minimal
-        // PID_P and maximal PID_I
-        speedController.cfg_pid_p = F16(MIN_P);
-        speedController.cfg_pid_i_inv = fix16_div(
-          F16(1.0 / APP_PID_FREQUENCY),
-          motor_start_stop_time
-        );
-
-        speedController.in_knob = F16(PID_P_SETPOINT);
-
-        speedController.in_speed = sensors.speed;
-        speedController.tick();
-        triacDriver.setpoint = speedController.out_power;
-        triacDriver.tick();
-
-        if (!sensors.zero_cross_up) break;
-
-        wait_stable_speed(sensors.speed, MEASURE_AMPLITUDE_START, 13);
-
-        break;
-
-      case MEASURE_AMPLITUDE_START:
-        speedController.cfg_pid_p = pid_param_attempt_value;
-        measure_amplitude_max_speed = 0;
-        measure_amplitude_min_speed = fix16_maximum;
-        measure_amplitude_ticks = 0;
-        median_filter.reset();
-        set_state(MEASURE_AMPLITUDE_CYCLE);
-
-      case MEASURE_AMPLITUDE_CYCLE:
-        speedController.in_knob = F16(PID_P_SETPOINT);
-        speedController.in_speed = sensors.speed;
-        speedController.tick();
-        triacDriver.setpoint = speedController.out_power;
-        triacDriver.tick();
-
-        if (!sensors.zero_cross_up) break;
-
-        ticks_cnt++;
-        median_filter.add(sensors.speed);
-
-        if (ticks_cnt >= 12)
+        while (iterations_count < max_iterations)
         {
-          fix16_t filtered_speed = median_filter.result();
-          median_filter.reset();
-          ticks_cnt = 0;
+            speed_tracker.reset();
 
-          if (measure_amplitude_max_speed < filtered_speed)
-          {
-            measure_amplitude_max_speed = filtered_speed;
-          }
-          if (measure_amplitude_min_speed > filtered_speed)
-          {
-            measure_amplitude_min_speed = filtered_speed;
-          }
+            // Wait for stable speed with minimal
+            // PID_P and maximal PID_I
+            regulator.cfg_pid_p = F16(MIN_P);
+
+            while (!speed_tracker.is_stable_or_exceeded())
+            {
+                regulator.tick(F16(PID_P_SETPOINT), meter.speed);
+                io.setpoint = regulator.out_power;
+
+                YIELD(false);
+                if (!io_data.zero_cross_up) continue;
+
+                speed_tracker.push(meter.speed);
+            };
+
+            //
+            // Measure amplitude
+            //
+
+            regulator.cfg_pid_p = pid_param_attempt_value;
+            measure_amplitude_max_speed = 0;
+            measure_amplitude_min_speed = fix16_maximum;
+            measure_amplitude_ticks = 0;
+            median_filter.reset();
+            ticks_cnt = 0;
+
+            while (measure_amplitude_ticks < measure_amplitude_ticks_max)
+            {
+                regulator.tick(F16(PID_P_SETPOINT), meter.speed);
+                io.setpoint = regulator.out_power;
+
+                YIELD(false);
+                if (!io_data.zero_cross_up) continue;
+
+                ticks_cnt++;
+                median_filter.add(meter.speed);
+
+                if (ticks_cnt >= 12)
+                {
+                    fix16_t filtered_speed = median_filter.result();
+                    median_filter.reset();
+                    ticks_cnt = 0;
+
+                    if (measure_amplitude_max_speed < filtered_speed)
+                    {
+                        measure_amplitude_max_speed = filtered_speed;
+                    }
+                    if (measure_amplitude_min_speed > filtered_speed)
+                    {
+                        measure_amplitude_min_speed = filtered_speed;
+                    }
+                }
+
+                measure_amplitude_ticks++;
+            }
+
+            fix16_t amplitude = measure_amplitude_max_speed - measure_amplitude_min_speed;
+
+            // Save amplitude of first iteration as reference
+            // to compare values of next iterations to this value
+            if (iterations_count == 0) first_iteration_amplitude = amplitude;
+
+            // If amplitude is less than margin value
+            // step for next iteration should be positive,
+            // otherwise - negative
+            if (amplitude <= fix16_mul(first_iteration_amplitude, F16(MAX_AMPLITUDE)))
+            {
+                iteration_step = abs(iteration_step);
+            }
+            else iteration_step = -abs(iteration_step);
+
+            pid_param_attempt_value += iteration_step;
+
+            iteration_step /= 2;
+            iterations_count++;
+
         }
 
-        measure_amplitude_ticks++;
+        pid_p_calibrated_value = fix16_mul(pid_param_attempt_value, F16(PID_SAFETY_SCALE));
 
-        if (measure_amplitude_ticks >= measure_amplitude_ticks_max)
-        {
-          fix16_t amplitude = measure_amplitude_max_speed - measure_amplitude_min_speed;
+        //
+        // Pick I coeff value by half cut method
+        //
 
-          // Save amplitude of first iteration as reference
-          // to compare values of next iterations to this value
-          if (iterations_count == 0) first_iteration_amplitude = amplitude;
-
-          // If amplitude is less than margin value
-          // step for next iteration should be positive,
-          // otherwise - negative
-          if (amplitude <= fix16_mul(first_iteration_amplitude, F16(MAX_AMPLITUDE)))
-          {
-            iteration_step = abs(iteration_step);
-          }
-          else iteration_step = -abs(iteration_step);
-
-          pid_param_attempt_value += iteration_step;
-
-          iteration_step /= 2;
-          iterations_count++;
-          if (iterations_count >= max_iterations)
-          {
-            pid_p_calibrated_value = fix16_mul(pid_param_attempt_value, F16(PID_SAFETY_SCALE));
-            set_state(INIT_I_CALIBRATION);
-            break;
-          }
-          set_state(WAIT_STABLE_SPEED_P_CALIBRATION_START);
-        }
-
-        break;
-
-      case INIT_I_CALIBRATION:
         iterations_count = 0;
         // Start calibration with safe
         // PID_I value = motor_start_stop_time
@@ -308,315 +282,239 @@ public:
         // for reability of measurement.
         measure_overshoot_ticks_max = fix16_to_int(motor_start_stop_time * 50);
 
-        speedController.cfg_pid_p = pid_p_calibrated_value;
-
-        set_state(WAIT_STABLE_SPEED_I_CALIBRATION_START);
-
-      case WAIT_STABLE_SPEED_I_CALIBRATION_START:
-        wait_stable_speed_init();
-        set_state(WAIT_STABLE_SPEED_I_CALIBRATION_CYCLE);
-
-      case WAIT_STABLE_SPEED_I_CALIBRATION_CYCLE:
-        // Wait for stable speed with minimal
-        // PID_P and maximal PID_I
-        speedController.cfg_pid_p = F16(MIN_P);
-        speedController.cfg_pid_i_inv = fix16_div(
-          F16(1.0 / APP_PID_FREQUENCY),
-          motor_start_stop_time / 2
-        );
-
-        speedController.in_knob = F16(PID_I_START_SETPOINT);
-
-        speedController.in_speed = sensors.speed;
-        speedController.tick();
-        triacDriver.setpoint = speedController.out_power;
-        triacDriver.tick();
-
-        if (!sensors.zero_cross_up) break;
-
-        wait_stable_speed(sensors.speed, MEASURE_OVERSHOOT_START, 13);
-
-        break;
-
-      case MEASURE_OVERSHOOT_START:
-        speedController.cfg_pid_p = pid_p_calibrated_value;
-        speedController.cfg_pid_i_inv = fix16_div(
-          F16(1.0 / APP_PID_FREQUENCY),
-          pid_param_attempt_value
-        );
-
-        measure_overshoot_ticks = 0;
-        overshoot_speed = 0;
-        set_state(MEASURE_OVERSHOOT_CYCLE);
-
-      case MEASURE_OVERSHOOT_CYCLE:
-        speedController.in_knob = F16(PID_I_OVERSHOOT_SETPOINT);
-        speedController.in_speed = sensors.speed;
-        speedController.tick();
-        triacDriver.setpoint = speedController.out_power;
-        triacDriver.tick();
-
-        if (!sensors.zero_cross_up) break;
-
-        measure_overshoot_ticks++;
-
-        // Apply lowpass filter to speed data
-        filtered_speed = fix16_mul(
-          F16(LOWPASS_FILTER_ALPHA),
-          sensors.speed
-        ) + fix16_mul(
-          F16(1.0 - LOWPASS_FILTER_ALPHA),
-          (measure_overshoot_ticks == 1) ? sensors.speed : filtered_speed
-        );
-
-        // Find max speed value
-        if (overshoot_speed < filtered_speed) overshoot_speed = filtered_speed;
-        if (measure_overshoot_ticks >= measure_overshoot_ticks_max)
+        while (iterations_count < max_iterations)
         {
-          // Save overshoot of first iteration as reference
-          // to compare next iterations values to this value
-          if (iterations_count == 0) first_iteration_overshoot_speed = overshoot_speed;
+            speed_tracker.reset();
 
-          fix16_t overshoot = fix16_div(
-            overshoot_speed - first_iteration_overshoot_speed,
-            first_iteration_overshoot_speed
-          );
+            // Wait for stable speed with minimal
+            // PID_P and maximal PID_I
+            regulator.cfg_pid_p = F16(MIN_P);
+            regulator.cfg_pid_i_inv = fix16_div(
+                F16(1.0 / APP_PID_FREQUENCY),
+                motor_start_stop_time / 2
+            );
 
-          // If overshoot is greater than margin value
-          // step for next iteration should be positive,
-          // otherwise - negative
-          if (overshoot > F16(MAX_OVERSHOOT)) iteration_step = abs(iteration_step);
-          else iteration_step = -abs(iteration_step);
+            while (!speed_tracker.is_stable_or_exceeded())
+            {
+                regulator.tick(F16(PID_I_START_SETPOINT), meter.speed);
+                io.setpoint = regulator.out_power;
 
-          pid_param_attempt_value += iteration_step;
+                YIELD(false);
+                if (!io_data.zero_cross_up) continue;
 
-          iteration_step /= 2;
-          iterations_count++;
-          if (iterations_count >= max_iterations)
-          {
-            pid_i_calibrated_value = fix16_div(pid_param_attempt_value, F16(PID_SAFETY_SCALE));
-            set_state(STOP);
-            break;
-          }
-          set_state(WAIT_STABLE_SPEED_I_CALIBRATION_START);
+                speed_tracker.push(meter.speed);
+            }
+
+            //
+            // Measure overshoot
+            //
+
+            regulator.cfg_pid_p = pid_p_calibrated_value;
+            regulator.cfg_pid_i_inv = fix16_div(
+                F16(1.0 / APP_PID_FREQUENCY),
+                pid_param_attempt_value
+            );
+
+            measure_overshoot_ticks = 0;
+            overshoot_speed = 0;
+
+            while (measure_overshoot_ticks < measure_overshoot_ticks_max)
+            {
+                regulator.tick(F16(PID_I_OVERSHOOT_SETPOINT), meter.speed);
+                io.setpoint = regulator.out_power;
+
+                YIELD(false);
+                if (!io_data.zero_cross_up) continue;
+
+                measure_overshoot_ticks++;
+
+                // Apply lowpass filter to speed data
+                filtered_speed = fix16_mul(
+                    F16(LOWPASS_FILTER_ALPHA),
+                    meter.speed
+                ) + fix16_mul(
+                    F16(1.0 - LOWPASS_FILTER_ALPHA),
+                    (measure_overshoot_ticks == 1) ? meter.speed : filtered_speed
+                );
+
+                // Find max speed value
+                if (overshoot_speed < filtered_speed) overshoot_speed = filtered_speed;
+            }
+
+            // Save overshoot of first iteration as reference
+            // to compare next iterations values to this value
+            if (iterations_count == 0) first_iteration_overshoot_speed = overshoot_speed;
+
+            fix16_t overshoot = fix16_div(
+                overshoot_speed - first_iteration_overshoot_speed,
+                first_iteration_overshoot_speed
+            );
+
+            // If overshoot is greater than margin value
+            // step for next iteration should be positive,
+            // otherwise - negative
+            if (overshoot > F16(MAX_OVERSHOOT)) iteration_step = abs(iteration_step);
+            else iteration_step = -abs(iteration_step);
+
+            pid_param_attempt_value += iteration_step;
+
+            iteration_step /= 2;
+            iterations_count++;
         }
 
-        break;
+        pid_i_calibrated_value = fix16_div(pid_param_attempt_value, F16(PID_SAFETY_SCALE));
 
-      case STOP:
-        // Store in flash
+        //
+        // Store results
+        //
+
         eeprom_float_write(
-          CFG_PID_P_ADDR,
-          fix16_to_float(pid_p_calibrated_value)
+            CFG_PID_P_ADDR,
+            fix16_to_float(pid_p_calibrated_value)
         );
         eeprom_float_write(
-          CFG_PID_I_ADDR,
-          fix16_to_float(pid_i_calibrated_value)
+            CFG_PID_I_ADDR,
+            fix16_to_float(pid_i_calibrated_value)
         );
-        speedController.configure();
-        set_state(INIT_WAIT_STABLE_LOW_SPEED); // Reset state to initial
+
+        //
+        // Reload config & flush garbage after unsync, caused by long EEPROM write.
+        //
+        regulator.configure();
+        meter.reset_state();
+
         return true;
     }
-    return false;
-  }
 
 private:
 
-  enum State {
-    INIT_WAIT_STABLE_LOW_SPEED,
-    WAIT_STABLE_LOW_SPEED,
-    INIT_MEASURE_START_TIME,
-    WAIT_STABLE_SPEED_UP,
-    INIT_MEASURE_STOP_TIME,
-    WAIT_STABLE_SPEED_DOWN,
-    INIT_P_CALIBRATION,
-    WAIT_STABLE_SPEED_P_CALIBRATION_START,
-    WAIT_STABLE_SPEED_P_CALIBRATION_CYCLE,
-    MEASURE_AMPLITUDE_START,
-    MEASURE_AMPLITUDE_CYCLE,
-    INIT_I_CALIBRATION,
-    WAIT_STABLE_SPEED_I_CALIBRATION_START,
-    WAIT_STABLE_SPEED_I_CALIBRATION_CYCLE,
-    MEASURE_OVERSHOOT_START,
-    MEASURE_OVERSHOOT_CYCLE,
-    STOP
-  } state = INIT_WAIT_STABLE_LOW_SPEED;
+    // Desireable accuracy of PID calibration is 0.1
+    // We need 7 iterations to achieve this accuracy
+    // because (10 - 1)/2^7 = 0.07 < 0.1
+    enum {
+        max_iterations = 7
+    };
 
-  // Desireable accuracy of PID calibration is 0.1
-  // We need 7 iterations to achieve this accuracy
-  // because (10 - 1)/2^7 = 0.07 < 0.1
-  enum {
-    max_iterations = 7
-  };
+    int ticks_cnt = 0;
 
-  int ticks_cnt = 0;
+    // Holds buffer length for start/stop time calculation
+    enum {
+        speed_data_length = (int)(SPEED_DATA_SAVE_TIME_MAX * 60 / SPEED_DATA_SAVE_RATIO)
+    };
 
-  // Holds buffer length for start/stop time calculation
-  enum {
-    speed_data_length = (int)(SPEED_DATA_SAVE_TIME_MAX * 60 / SPEED_DATA_SAVE_RATIO)
-  };
+    // Buffers for speed data for start/stop
+    // time measurement
+    fix16_t start_speed_data[speed_data_length];
+    fix16_t stop_speed_data[speed_data_length];
+    int speed_data_idx = 0;
+    int start_time_ticks = 0;
+    int stop_time_ticks = 0;
+    etl::cyclic_value<uint32_t, 0, SPEED_DATA_SAVE_RATIO - 1> start_stop_scaler_cyclic_cnt;
+    fix16_t filtered_speed = 0;
 
-  // Buffers for speed data for start/stop
-  // time measurement
-  fix16_t start_speed_data[speed_data_length];
-  fix16_t stop_speed_data[speed_data_length];
-  int speed_data_idx = 0;
-  int start_time_ticks = 0;
-  int stop_time_ticks = 0;
-  int start_stop_scaler_cnt;
-  fix16_t filtered_speed = 0;
+    fix16_t prev_speed = 0;
 
-  fix16_t prev_speed = 0;
+    int start_speed_data_len;
+    int stop_speed_data_len;
 
-  int start_speed_data_len;
-  int stop_speed_data_len;
+    fix16_t pid_param_attempt_value;
 
-  fix16_t pid_param_attempt_value;
+    fix16_t pid_p_calibrated_value;
+    fix16_t pid_i_calibrated_value;
 
-  fix16_t pid_p_calibrated_value;
-  fix16_t pid_i_calibrated_value;
+    fix16_t iteration_step;
 
-  fix16_t iteration_step;
+    fix16_t measure_amplitude_max_speed;
+    fix16_t measure_amplitude_min_speed;
 
-  fix16_t measure_amplitude_max_speed;
-  fix16_t measure_amplitude_min_speed;
+    // Holds value calculated during first attempt
+    fix16_t first_iteration_amplitude;
 
-  // Holds value calculated during first attempt
-  fix16_t first_iteration_amplitude;
+    int iterations_count = 0;
 
-  int iterations_count = 0;
+    // History of measured speed. Used to detect stable values.
+    // At 50Hz ~ 0.25s for single fetch, 3s timeout
+    StabilityFilterTemplate<F16(1.0), 12, 12*13> speed_tracker;
 
-  fix16_t setpoint = 0;
+    int measure_attempts = 0;
 
-  // History of measured speed. Used to detect stable values.
-  StabilityFilterTemplate<F16(1.0)> speed_tracker;
+    MedianIteratorTemplate<fix16_t, 32> median_filter;
+    fix16_t motor_start_stop_time;
 
-  int measure_attempts = 0;
+    int measure_amplitude_ticks = 0;
+    int measure_amplitude_ticks_max;
 
-  MedianIteratorTemplate<fix16_t, 32> median_filter;
-  fix16_t motor_start_stop_time;
+    int measure_overshoot_ticks = 0;
+    // Measure overshoot during period
+    // equal to motor start/stop time.
+    // One tick is 0.02 sec if power supply frequency is 50 Hz
+    int measure_overshoot_ticks_max;
 
-  int measure_amplitude_ticks = 0;
-  int measure_amplitude_ticks_max;
+    fix16_t overshoot_speed = 0;
+    fix16_t first_iteration_overshoot_speed = 0;
 
-  int measure_overshoot_ticks = 0;
-  // Measure overshoot during period
-  // equal to motor start/stop time.
-  // One tick is 0.02 sec if power supply frequency is 50 Hz
-  int measure_overshoot_ticks_max;
-
-  fix16_t overshoot_speed = 0;
-  fix16_t first_iteration_overshoot_speed = 0;
-
-  void set_state(State st)
-  {
-    state = st;
-    ticks_cnt = 0;
-  }
-
-  // Returns sum of start and stop times
-  fix16_t calculate_start_stop_time(
-    int start_len,
-    fix16_t start_data[],
-    int stop_len,
-    fix16_t stop_data[]
-  )
-  {
-    fix16_t start_steady_speed = start_data[start_len - 1];
-    fix16_t start_initial_speed = start_data[0];
-    fix16_t speed_at_measure_threshold = fix16_mul(
-      start_steady_speed,
-      F16(1.0 - SPEED_MEASURE_THRESHOLD)
-    ) + fix16_mul(
-      start_initial_speed,
-      F16(SPEED_MEASURE_THRESHOLD)
-    );
-
-    fix16_t start_time_measured = 0;
-
-    for (int i = 0; i < start_len; i++)
+    // Returns sum of start and stop times
+    fix16_t calculate_start_stop_time(
+        int start_len,
+        fix16_t start_data[],
+        int stop_len,
+        fix16_t stop_data[]
+    )
     {
-      if (start_data[i] > speed_at_measure_threshold)
-      {
-        start_time_measured = fix16_from_float((float)(i * start_time_ticks) / (float)(start_len *  APP_TICK_FREQUENCY));
-        break;
-      }
+        fix16_t start_steady_speed = start_data[start_len - 1];
+        fix16_t start_initial_speed = start_data[0];
+        fix16_t speed_at_measure_threshold = fix16_mul(
+            start_steady_speed,
+            F16(1.0 - SPEED_MEASURE_THRESHOLD)
+        ) + fix16_mul(
+            start_initial_speed,
+            F16(SPEED_MEASURE_THRESHOLD)
+        );
+
+        fix16_t start_time_measured = 0;
+
+        for (int i = 0; i < start_len; i++)
+        {
+            if (start_data[i] > speed_at_measure_threshold)
+            {
+                start_time_measured = fix16_from_float((float)(i * start_time_ticks) / (float)(start_len *  APP_TICK_FREQUENCY));
+                break;
+            }
+        }
+
+        fix16_t stop_steady_speed = stop_data[stop_len - 1];
+        fix16_t stop_initial_speed = stop_data[0];
+        speed_at_measure_threshold = fix16_mul(
+            stop_steady_speed,
+            F16(1.0 - SPEED_MEASURE_THRESHOLD)
+        ) + fix16_mul(
+            stop_initial_speed,
+            F16(SPEED_MEASURE_THRESHOLD)
+        );
+
+        fix16_t stop_time_measured = 0;
+
+        for (int i = 0; i < stop_len; i++)
+        {
+            if (stop_data[i] < speed_at_measure_threshold)
+            {
+                stop_time_measured = fix16_from_float((float)(i * stop_time_ticks) / (float)(stop_len  * APP_TICK_FREQUENCY));
+                break;
+          }
+        }
+
+        fix16_t start_stop_time_measured = start_time_measured + stop_time_measured;
+
+        // Assume that motor is 1-st order dynamic system,
+        // calculate time when it will cross SPEED_IDEAL_THRESHOLD
+        fix16_t start_stop_time = fix16_mul(
+            start_stop_time_measured,
+            start_stop_adjust
+        );
+
+        return start_stop_time;
     }
-
-    fix16_t stop_steady_speed = stop_data[stop_len - 1];
-    fix16_t stop_initial_speed = stop_data[0];
-    speed_at_measure_threshold = fix16_mul(
-      stop_steady_speed,
-      F16(1.0 - SPEED_MEASURE_THRESHOLD)
-    ) + fix16_mul(
-      stop_initial_speed,
-      F16(SPEED_MEASURE_THRESHOLD)
-    );
-
-    fix16_t stop_time_measured = 0;
-
-    for (int i = 0; i < stop_len; i++)
-    {
-      if (stop_data[i] < speed_at_measure_threshold)
-      {
-        stop_time_measured = fix16_from_float((float)(i * stop_time_ticks) / (float)(stop_len  * APP_TICK_FREQUENCY));
-        break;
-      }
-    }
-
-    fix16_t start_stop_time_measured = start_time_measured + stop_time_measured;
-
-    // Assume that motor is 1-st order dynamic system,
-    // calculate time when it will cross SPEED_IDEAL_THRESHOLD
-    fix16_t start_stop_time = fix16_mul(
-      start_stop_time_measured,
-      start_stop_adjust
-    );
-
-    return start_stop_time;
-  }
-
-  void wait_stable_speed_init() {
-    speed_tracker.reset();
-    measure_attempts = 0;
-    ticks_cnt = 0;
-    median_filter.reset();
-  }
-
-  void wait_stable_speed(
-    fix16_t current_speed,
-    State next_state_on_success,
-    int max_attempts
-  ) {
-    median_filter.add(current_speed);
-    ticks_cnt++;
-
-    // ~ 0.25s
-    if (ticks_cnt >= 12)
-    {
-      speed_tracker.push(median_filter.result());
-
-      // if speed stable OR waited > 3 sec => record data
-
-      if (measure_attempts > max_attempts) {
-        set_state(next_state_on_success);
-        return;
-      }
-
-      // Speed stable if difference <= 1 %.
-      if (speed_tracker.is_stable()) {
-        set_state(next_state_on_success);
-        return;
-      }
-
-      // Prepare for next measure attempt
-      measure_attempts++;
-      ticks_cnt = 0;
-      median_filter.reset();
-    }
-  }
 };
-
 
 
 #endif
