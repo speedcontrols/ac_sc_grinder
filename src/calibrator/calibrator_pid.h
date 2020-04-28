@@ -267,6 +267,55 @@ public:
         // Pick I coeff value by half cut method
         //
 
+        speed_tracker.reset();
+
+        // Wait for stable speed with minimal
+        // PID_P and maximal PID_I
+        regulator.cfg_pid_p = F16(MIN_P);
+        regulator.cfg_pid_i_inv = fix16_div(
+            F16(1.0 / APP_PID_FREQUENCY),
+            motor_start_stop_time
+        );
+
+        while (!speed_tracker.is_stable_or_exceeded())
+        {
+            regulator.tick(F16(PID_I_OVERSHOOT_SETPOINT), meter.speed);
+            io.setpoint = regulator.out_power;
+
+            YIELD(false);
+            if (!io_data.zero_cross_up) continue;
+
+            speed_tracker.push(meter.speed);
+        }
+
+        // Measure steady state speed.
+        // Will be used for oversoot value calculation.
+        measure_steadystate_ticks = 0;
+        steadystate_speed = 0;
+
+        while (measure_steadystate_ticks < measure_steadystate_ticks_max)
+        {
+            regulator.tick(F16(PID_I_OVERSHOOT_SETPOINT), meter.speed);
+            io.setpoint = regulator.out_power;
+
+            YIELD(false);
+            if (!io_data.zero_cross_up) continue;
+
+            measure_steadystate_ticks++;
+
+            // Apply lowpass filter to speed data
+            filtered_speed = fix16_mul(
+                F16(LOWPASS_FILTER_ALPHA),
+                meter.speed
+            ) + fix16_mul(
+                F16(1.0 - LOWPASS_FILTER_ALPHA),
+                (measure_steadystate_ticks == 1) ? meter.speed : filtered_speed
+            );
+
+            // Find max speed value
+            if (steadystate_speed < filtered_speed) steadystate_speed = filtered_speed;
+        }
+
         iterations_count = 0;
         // Start calibration with safe
         // PID_I value = motor_start_stop_time
@@ -275,7 +324,6 @@ public:
         iteration_step = -(motor_start_stop_time / 2);
 
         pid_param_attempt_value = motor_start_stop_time;
-        first_iteration_overshoot_speed = 0;
 
         // Set overshoot measurement time interval
         // to motor_start_stop_time
@@ -309,14 +357,7 @@ public:
             // Measure overshoot
             //
 
-            // Set minimal PID_P at first iteration
-            // to get minimal possible oveshoot
-            // and then compare next iterations values
-            // to this value
-            if (iterations_count == 0) {
-                regulator.cfg_pid_p = F16(MIN_P);
-            }
-            else regulator.cfg_pid_p = pid_p_calibrated_value;
+            regulator.cfg_pid_p = pid_p_calibrated_value;
 
             regulator.cfg_pid_i_inv = fix16_div(
                 F16(1.0 / APP_PID_FREQUENCY),
@@ -349,13 +390,9 @@ public:
                 if (overshoot_speed < filtered_speed) overshoot_speed = filtered_speed;
             }
 
-            // Save overshoot of first iteration as reference
-            // to compare next iterations values to this value
-            if (iterations_count == 0) first_iteration_overshoot_speed = overshoot_speed;
-
             fix16_t overshoot = fix16_div(
-                overshoot_speed - first_iteration_overshoot_speed,
-                first_iteration_overshoot_speed
+                overshoot_speed - steadystate_speed,
+                steadystate_speed
             );
 
             // If overshoot is greater than margin value
@@ -458,8 +495,15 @@ private:
     // One tick is 0.02 sec if power supply frequency is 50 Hz
     int measure_overshoot_ticks_max;
 
+    int measure_steadystate_ticks = 0;
+    // Measure steady state speed with safe PID parameters
+    // during 3 sec interval
+    enum {
+        measure_steadystate_ticks_max = 50*3
+    };
+
     fix16_t overshoot_speed = 0;
-    fix16_t first_iteration_overshoot_speed = 0;
+    fix16_t steadystate_speed = 0;
 
     // Returns sum of start and stop times
     fix16_t calculate_start_stop_time(
