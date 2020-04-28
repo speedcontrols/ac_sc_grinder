@@ -202,8 +202,10 @@ private:
         fix16_t divergence = knob_normalized - speed;
 
         // pid_speed_integral += (1.0 / cfg_pid_i) * divergence;
+#ifndef NO_PID_I
         fix16_t tmp = pid_speed_integral + fix16_mul(cfg_pid_i_inv, divergence);
         pid_speed_integral = fix16_clamp(tmp, cfg_rpm_min_limit_norm, cfg_rpm_max_limit_norm);
+#endif
 
         fix16_t proportional = fix16_mul(cfg_pid_p, divergence);
 
