@@ -8,31 +8,11 @@
 
 extern "C" void SystemClock_Config(void);
 
-namespace hal {
+
+// Interrupt handlers should be un general namespace to override weak defaults.
 
 
-void setup(void)
-{
-    HAL_Init();
-    SystemClock_Config();
-
-    MX_GPIO_Init();
-    MX_DMA_Init();
-    MX_ADC1_Init();
-
-    triac_ignition_off();
-}
-
-
-void triac_ignition_on() {
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-}
-void triac_ignition_off() {
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-}
-
-
-// ADC data is transfered to double size DMA buffer. Interrupts happen on half
+// ADC data is transferred to double size DMA buffer. Interrupts happen on half
 // transfer and full transfer. So, we can process received data without risk
 // of override. While half of buffer is processed, another half os used to
 // collect next data.
@@ -57,7 +37,6 @@ static void adc_raw_data_load(uint32_t adc_data_offset)
     }
 }
 
-
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* AdcHandle)
 {
     (void)(AdcHandle);
@@ -69,6 +48,30 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* AdcHandle)
     (void)(AdcHandle);
     adc_raw_data_load(ADC_FETCH_PER_TICK * ADC_CHANNELS_COUNT);
     io.consume(adc_voltage_buf, adc_current_buf, adc_knob_buf, adc_v_refin_buf);
+}
+
+
+namespace hal {
+
+
+void setup(void)
+{
+    HAL_Init();
+    SystemClock_Config();
+
+    MX_GPIO_Init();
+    MX_DMA_Init();
+    MX_ADC1_Init();
+
+    triac_ignition_off();
+}
+
+
+void triac_ignition_on() {
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+}
+void triac_ignition_off() {
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 }
 
 

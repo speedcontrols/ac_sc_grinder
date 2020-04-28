@@ -35,6 +35,7 @@ public:
             // First, check knob is at sstart position (zero),
             // prior to start detect dial sequence
             ticks_cnt = 0;
+            YIELD(false);
 
             while (IS_KNOB_LOW(io_data.knob)) {
                 YIELD(false);

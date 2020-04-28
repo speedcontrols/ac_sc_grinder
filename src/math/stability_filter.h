@@ -93,7 +93,7 @@ private:
     int ticks_count;
     int median_count;
 
-    fix16_t edge_multiplier = F16(PRECISION_IN_PERCENTS / 100.0);
+    fix16_t edge_multiplier = PRECISION_IN_PERCENTS / 100;
 
     MedianIteratorTemplate<fix16_t, MEDIAN_LEN >= 2 ? MEDIAN_LEN : 2> median_filter;
 };

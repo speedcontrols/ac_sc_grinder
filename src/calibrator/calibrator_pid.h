@@ -14,8 +14,8 @@
 // Scale down PID to this value for safety
 #define PID_SAFETY_SCALE 0.75
 
-#define PID_P_SETPOINT 0.3
-#define PID_I_OVERSHOOT_SETPOINT 0.8
+#define PID_P_SETPOINT 0.5
+#define PID_I_OVERSHOOT_SETPOINT 0.5
 #define PID_I_START_SETPOINT 0.3
 
 // Maximum speed oscillation amplitude
@@ -309,7 +309,15 @@ public:
             // Measure overshoot
             //
 
-            regulator.cfg_pid_p = pid_p_calibrated_value;
+            // Set minimal PID_P at first iteration
+            // to get minimal possible oveshoot
+            // and then compare next iterations values
+            // to this value
+            if (iterations_count == 0) {
+                regulator.cfg_pid_p = F16(MIN_P);
+            }
+            else regulator.cfg_pid_p = pid_p_calibrated_value;
+
             regulator.cfg_pid_i_inv = fix16_div(
                 F16(1.0 / APP_PID_FREQUENCY),
                 pid_param_attempt_value
@@ -433,8 +441,8 @@ private:
     int iterations_count = 0;
 
     // History of measured speed. Used to detect stable values.
-    // At 50Hz ~ 0.25s for single fetch, 3s timeout
-    StabilityFilterTemplate<F16(1.0), 12, 12*13> speed_tracker;
+    // At 50Hz ~ 0.25s for single fetch, 9s timeout
+    StabilityFilterTemplate<F16(1.0), 12, 12*39> speed_tracker;
 
     int measure_attempts = 0;
 

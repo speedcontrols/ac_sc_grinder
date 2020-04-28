@@ -12,8 +12,8 @@
 #define R_MEASURE_ATTEMPTS 3
 
 // Array size to record up to half of current & voltage positive wave.
-// For 50/60Hz, worst case + some reserve is (APP_TICK_FREQUENCY / 49).
-constexpr int calibrator_rl_buffer_length = APP_TICK_FREQUENCY / 49;
+// For 50/60Hz, worst case + some reserve is (APP_TICK_FREQUENCY / 48).
+constexpr int calibrator_rl_buffer_length = APP_TICK_FREQUENCY / 48;
 
 
 class CalibratorStatic
@@ -30,6 +30,7 @@ public:
         io.setpoint = 0;
         r_interp_table_index = 0;
 
+        ticks_cnt = 0;
         YIELD_WHILE((ticks_cnt++ < (2 * APP_TICK_FREQUENCY)), false);
 
         YIELD_UNTIL(io_data.zero_cross_up, false);
@@ -43,10 +44,11 @@ public:
         while (!io_data.zero_cross_down) {
             YIELD(false);
 
-            // TODO: bounds check
-            voltage_buffer[buffer_idx] = fix16_to_float(io_data.voltage);
-            current_buffer[buffer_idx] = fix16_to_float(io_data.current);
-            buffer_idx++;
+            if (buffer_idx < calibrator_rl_buffer_length) {
+                voltage_buffer[buffer_idx] = fix16_to_float(io_data.voltage);
+                current_buffer[buffer_idx] = fix16_to_float(io_data.current);
+                buffer_idx++;
+            }
         }
 
         process_thresholds();
@@ -70,6 +72,7 @@ public:
 
                 io.setpoint = 0;
 
+                ticks_cnt = 0;
                 YIELD_WHILE((ticks_cnt++ < (APP_TICK_FREQUENCY / 2)), false);
 
                 // Calibration should be started at the begining of positive period
@@ -188,12 +191,6 @@ private:
     } state = INIT;
 
     int ticks_cnt = 0;
-
-    void set_state(State st)
-    {
-        ticks_cnt = 0;
-        state = st;
-    }
 
     // Calculate thresholds for current and power to drop noise in speed sensor
     void process_thresholds()

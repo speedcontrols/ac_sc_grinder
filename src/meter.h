@@ -17,7 +17,7 @@
 
 // Buffer used for storage only positive half-wave values.
 // But we use the same size as in calibrator (to share later).
-constexpr int voltage_buffer_length = APP_TICK_FREQUENCY / 49;
+constexpr int voltage_buffer_length = APP_TICK_FREQUENCY / 48;
 
 class Meter
 {
@@ -164,12 +164,20 @@ private:
         // to extrapolate during negative half-wave
         if (io_data.voltage > 0)
         {
-            voltage_buffer[voltage_buffer_head++] = io_data.voltage;
+            // buffer overflow check
+            if (voltage_buffer_head < voltage_buffer_length) {
+                voltage_buffer[voltage_buffer_head++] = io_data.voltage;
+            }
             virtual_voltage = io_data.voltage;
         }
         else
         {
-            virtual_voltage = -voltage_buffer[voltage_buffer_tick_counter++];
+            // buffer overflow check
+            if (voltage_buffer_tick_counter < voltage_buffer_head) {
+                virtual_voltage = -voltage_buffer[voltage_buffer_tick_counter++];
+            } else {
+                virtual_voltage = -voltage_buffer[voltage_buffer_head--];
+            }
         }
 
         // Calculate sums
