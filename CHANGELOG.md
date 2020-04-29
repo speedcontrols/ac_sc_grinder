@@ -3,6 +3,7 @@
 
 - Full refactoring, prior to start more deep changes. Nothing "visible for
   users", but internals improved significantly.
+- Disabled regulator's integral component by default.
 - Moved triac's logic to ISR & use message queue to emit ADC data. Now logic
   is robust to theoretic computation bursts in event loop.
 - Use hand-made "YIELD" macro to improve calibrator's logic readability.

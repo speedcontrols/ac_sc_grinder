@@ -8,6 +8,7 @@ Device assembly <!-- omit in toc -->
 - [Install the rest and attach wires](#install-the-rest-and-attach-wires)
 - [Upload firmware and test](#upload-firmware-and-test)
 - [Cover PCB with protective coating](#cover-pcb-with-protective-coating)
+- [Firmware tune](#firmware-tune)
 
 
 ## Required components
@@ -159,9 +160,40 @@ contain acid. Advised glues were tested and are neutral.
 
 Disadvantage: all silicone glues need 1 day to dry.
 
-**UV glues & UV gels for nails**
+**UV gels for nails**
 
-TBD
+Those have more weak adhesion to PCB, than previous recipes. But this method may
+be more simple/accessible for you. At least, that's better than nothing :).
+
+NOTE. You should NOT use any random gel!
+
+- It should have good adhesion to PCB.
+- It should be "top coating" (good durability).
+- It should be marked as "soak off" / "no wipe" and so on.
+
+After testing adhesion of different samples, those look nice:
+
+- [MIZHSE Rubber Top Coat](https://www.aliexpress.com/item/32922287804.html) -
+  preferable.
+- [UR SUGAR Top Coat](https://www.aliexpress.com/item/32948364351.html) - may
+  be more viscous than desired for comfortable work.
+
+Make sure to clean PCB with IPA prior to apply gel.
+
+Disadvantage: average adhesion, not tested in long term (months and years).
+
+
+## Firmware tune
+
+By default, auto-tune tries to do the best, and you should not need manual
+modifications. But, there are some rare cases, when you may wish to change
+defaults:
+
+1. If grinder "oscillates" in some modes - reduce [`PID_SAFETY_SCALE`](https://github.com/speedcontrols/ac_sc_grinder/blob/24eba36e3c3c48c03d976829382f7f6ada63cc11/src/calibrator/calibrator_pid.h#L15)
+   to `0.5`.
+2. If you wish to enable back integral component of regulator - comment out
+   [`-DNO_PID_I`](https://github.com/speedcontrols/ac_sc_grinder/blob/24eba36e3c3c48c03d976829382f7f6ada63cc11/platformio.ini#L21)
+   line in config.
 
 
 ## The end :) <!-- omit in toc -->
