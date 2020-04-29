@@ -1,4 +1,4 @@
-1.1.0 / WIP
+1.1.0 / 2020-04-29
 ------------------
 
 - Full refactoring, prior to start more deep changes. Nothing "visible for
