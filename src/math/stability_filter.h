@@ -6,14 +6,12 @@
 #include "median.h"
 
 
-#define STABILITY_FILTER_LENGTH 3
-
 // Sliding tracker to wait until input value become stable.
 //
 // 1. Apply median filter first (if enabled).
 // 2. Test deviation of median filter output.
 //
-template <fix16_t PRECISION_IN_PERCENTS, uint8_t MEDIAN_LEN = 1, int32_t MAX_TICKS = -1>
+template <fix16_t PRECISION_IN_PERCENTS, uint8_t MEDIAN_LEN = 1, int32_t MAX_TICKS = -1, uint8_t FILTER_LENGTH = 3>
 class StabilityFilterTemplate {
 
 public:
@@ -35,7 +33,7 @@ public:
         if (MEDIAN_LEN <= 1) {
             ticks_count++;
             data[head_idx++] = val;
-            if (head_idx == STABILITY_FILTER_LENGTH) head_idx = 0;
+            if (head_idx == FILTER_LENGTH) head_idx = 0;
             data_count++;
             return;
         }
@@ -47,7 +45,7 @@ public:
         if (median_count >= MEDIAN_LEN)
         {
             data[head_idx++] = median_filter.result();
-            if (head_idx == STABILITY_FILTER_LENGTH) head_idx = 0;
+            if (head_idx == FILTER_LENGTH) head_idx = 0;
             data_count++;
             median_count = 0;
             median_filter.reset();
@@ -55,20 +53,25 @@ public:
     }
 
     bool is_stable() {
-        if (data_count < STABILITY_FILTER_LENGTH) return false;
+        if (data_count < FILTER_LENGTH) return false;
+
+        fix16_t min = fix16_maximum;
+        fix16_t max = fix16_minimum;
 
         // Temporary hardcoded for fixed length (3)
-        fix16_t a = data[0], b = data[1], c = data[2];
+        for (uint8_t i = 0; i < FILTER_LENGTH; i++)
+        {
+            fix16_t val = data[i];
 
-        fix16_t min = (a <= b && a <= c) ? a : ((b <= a && b <= c) ? b : c);
-        fix16_t max = (a >= b && a >= c) ? a : ((b >= a && b >= c) ? b : c);
+            if (val < min) min = val;
+            if (val > max) max = val;
+        }
 
         fix16_t diff = max - min;
 
         fix16_t abs_max = max > 0 ? max : - max;
-        fix16_t abs_diff = diff > 0 ? diff : - diff;
 
-        if (fix16_mul(abs_max, edge_multiplier) < abs_diff) return false;
+        if (fix16_mul(abs_max, edge_multiplier) < diff) return false;
 
         return true;
     }
@@ -82,12 +85,19 @@ public:
     }
 
     fix16_t average() {
-        return fix16_mul(data[0] + data[1] + data [2], F16(1.0 / STABILITY_FILTER_LENGTH));
+        fix16_t sum = 0;
+
+        for (uint8_t i = 0; i < FILTER_LENGTH; i++)
+        {
+            sum += data[i];
+        }
+
+        return fix16_mul(sum, F16(1.0 / FILTER_LENGTH));
     }
 
 
 private:
-    fix16_t data[STABILITY_FILTER_LENGTH];
+    fix16_t data[FILTER_LENGTH];
     int head_idx;
     int data_count;
     int ticks_count;
