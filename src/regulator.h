@@ -60,9 +60,12 @@ public:
         {
             if (limiter_active)
             {
-                // Recalculate `pid_speed_integral` to ensure smooth output change
-                // after switch to normal mode
-                pid_speed_integral = pid_speed_out - fix16_mul((knob_normalized - speed), cfg_pid_p);
+                if (pid_i_enabled)
+                {
+                    // Recalculate `pid_speed_integral` to ensure smooth output change
+                    // after switch to normal mode
+                    pid_speed_integral = pid_speed_out - fix16_mul((knob_normalized - speed), cfg_pid_p);
+                }
                 limiter_active = false;
             }
         }
@@ -129,9 +132,20 @@ public:
         reset_state();
     }
 
+    void pid_i_on()
+    {
+        reset_state();
+        pid_i_enabled = true;
+    }
+
     // Reset internal PID state
     void reset_state()
     {
+#ifdef NO_PID_I
+        pid_i_enabled = false;
+#else
+        pid_i_enabled = true;
+#endif
         pid_speed_integral = 0;
         pid_limiter_integral = 0;
         pid_speed_out = 0;
@@ -141,6 +155,8 @@ public:
     }
 
 private:
+    bool pid_i_enabled;
+
     // Control dead zone width near 0, when motor should not run.
     fix16_t cfg_dead_zone_width_norm;
 
@@ -201,16 +217,27 @@ private:
     {
         fix16_t divergence = knob_normalized - speed;
 
-        // pid_speed_integral += (1.0 / cfg_pid_i) * divergence;
-#ifndef NO_PID_I
-        fix16_t tmp = pid_speed_integral + fix16_mul(cfg_pid_i_inv, divergence);
-        pid_speed_integral = fix16_clamp(tmp, cfg_rpm_min_limit_norm, cfg_rpm_max_limit_norm);
-#endif
-
         fix16_t proportional = fix16_mul(cfg_pid_p, divergence);
 
+        if (pid_i_enabled)
+        {
+            // pid_speed_integral += (1.0 / cfg_pid_i) * divergence;
+            fix16_t tmp = pid_speed_integral + fix16_mul(cfg_pid_i_inv, divergence);
+            pid_speed_integral = fix16_clamp(
+                tmp,
+                cfg_rpm_min_limit_norm,
+                cfg_rpm_max_limit_norm
+            );
+
+            return fix16_clamp(
+                proportional + pid_speed_integral,
+                cfg_rpm_min_limit_norm,
+                cfg_rpm_max_limit_norm
+            );
+        }
+
         return fix16_clamp(
-            proportional + pid_speed_integral,
+            proportional,
             cfg_rpm_min_limit_norm,
             cfg_rpm_max_limit_norm
         );

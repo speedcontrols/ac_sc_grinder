@@ -173,6 +173,9 @@ public:
         // TODO - Measure period duration for correct operation at 50 and 60 Hz
         measure_amplitude_ticks_max = fix16_to_int(motor_start_stop_time * 50);
 
+        // Force PID integral component "on" for proper algorithm work
+        regulator.pid_i_on();
+
         // Set PID_I to max reasonable value
         regulator.cfg_pid_i_inv = fix16_div(
             F16(1.0 / APP_PID_FREQUENCY),
