@@ -12,7 +12,7 @@
 #define INIT_P_ITERATION_STEP 4.0
 
 // Scale down PID to this value for safety
-#define PID_SAFETY_SCALE 0.75
+#define PID_SAFETY_SCALE 0.9
 
 #define PID_P_SETPOINT 0.5
 #define PID_I_OVERSHOOT_SETPOINT 0.5
@@ -21,7 +21,7 @@
 // Maximum speed oscillation amplitude
 // and speed overshoot values
 // for PID_P and PID_I adjustment
-#define MAX_AMPLITUDE 1.1
+#define MAX_AMPLITUDE 3.0
 #define MAX_OVERSHOOT 0.15
 
 // Setpoint values for start and
@@ -482,7 +482,7 @@ private:
 
     // History of measured speed. Used to detect stable values.
     // At 50Hz ~ 0.25s for single fetch, 9s timeout
-    StabilityFilterTemplate<F16(1.0), 12, 12*39> speed_tracker;
+    StabilityFilterTemplate<F16(1.0), 12, 12*39, 6> speed_tracker;
 
     int measure_attempts = 0;
 

@@ -105,7 +105,7 @@ private:
     float rpms_approx[7];
 
     // At 50Hz ~ 0.25s for single fetch, 3s timeout
-    StabilityFilterTemplate<F16(0.3), 12, 12*13> speed_tracker;
+    StabilityFilterTemplate<F16(1.0), 12, 12*13, 6> speed_tracker;
 
     // Max order of approximation polynomial
     enum { polynomial_order = 3 };
