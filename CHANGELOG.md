@@ -1,3 +1,11 @@
+1.1.1 / 2020-06-13
+------------------
+
+- Fix build error, caused by bug in PlaformIO registry.
+- Fix PID_I component disable (regression in 1.1.0).
+- Tune calibrator options to provide more stable result.
+
+
 1.1.0 / 2020-04-29
 ------------------
 
