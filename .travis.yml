@@ -19,7 +19,7 @@ jobs:
           # Run tests
           - platformio test -e test_native
       -
-        if: branch = ignore_all_until_travis_fixed
+        #if: branch = ignore_all_until_travis_fixed
         name: macOS 10.14
         os: osx
         osx_image: xcode11.3
