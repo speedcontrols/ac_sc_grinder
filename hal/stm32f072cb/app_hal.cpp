@@ -5,6 +5,7 @@
 #include "adc.h"
 #include "dma.h"
 #include "spi.h"
+#include "tim.h"
 #include "gpio.h"
 
 extern "C" void SystemClock_Config(void);
@@ -65,16 +66,17 @@ void setup(void)
     MX_DMA_Init();
     MX_ADC_Init();
     MX_SPI2_Init();
+    MX_TIM15_Init();
 
     triac_ignition_off();
 }
 
 
 void triac_ignition_on() {
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7 | GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_SET);
 }
 void triac_ignition_off() {
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7 | GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7, GPIO_PIN_RESET);
 }
 
 

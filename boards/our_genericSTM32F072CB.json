@@ -1,21 +1,21 @@
 {
   "build": {
     "cpu": "cortex-m0",
-    "extra_flags": "-DSTM32F070xB",
+    "extra_flags": "-DSTM32F072xB",
     "f_cpu": "48000000L",
-    "mcu": "stm32f070cbt6"
+    "mcu": "stm32f072cbt6"
   },
   "debug": {
-    "jlink_device": "STM32F070CB",
+    "jlink_device": "STM32F072CB",
     "openocd_target": "stm32f0x",
-    "svd_path": "STM32F070x.svd"
+    "svd_path": "STM32F072x.svd"
   },
   "frameworks": [
     "arduino",
     "mbed",
     "stm32cube"
   ],
-  "name": "STM32F070CB",
+  "name": "STM32F072CB",
   "upload": {
     "maximum_ram_size": 16384,
     "maximum_size": 131072,
@@ -30,6 +30,6 @@
     "use_1200bps_touch": false,
     "wait_for_upload_port": false
   },
-  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f070cb.html",
+  "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f072cb.html",
   "vendor": "Generic"
 }
