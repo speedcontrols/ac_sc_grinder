@@ -1,15 +1,24 @@
 ## Speed calculation based on back-EMF
 
-Power balance of the AC commutator motor is described by this equation. Integrals can be
-replaced by sums:
-
-[![power balance equation](http://mathurl.com/yallc7kg.png)](http://mathurl.com/yallc7kg)
+Power balance of the AC commutator motor is described by this equation.
+Integrals can be replaced by sums:
 
 <!--
-$\int_{0}^{T} Voltage(t)\cdot Current(t)\cdot dt = R_\Sigma \int_{0}^{T} Current^2(t)\cdot dt\\
-\\
-\sum_{0}^{T} Voltage\cdot Current = R_\Sigma \sum_{0}^{T} Current^2$
+
+Use https://github.com/masakiaota/tex_image_link_generator
+to create snippetsfrom LaTeX
+
+https://tex-image-link-generator.herokuapp.com/
+
 -->
+
+![\begin{align*}
+& \int_{0}^{T} Voltage(t)\cdot Current(t)\cdot dt = R_\Sigma \int_{0}^{T} Current^2(t)\cdot dt\\
+\\
+\\
+& \sum_{0}^{T} Voltage\cdot Current = R_\Sigma \sum_{0}^{T} Current^2
+\end{align*}](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+%5Cbegin%7Balign%2A%7D%0A%26+%5Cint_%7B0%7D%5E%7BT%7D+Voltage%28t%29%5Ccdot+Current%28t%29%5Ccdot+dt+%3D+R_%5CSigma+%5Cint_%7B0%7D%5E%7BT%7D+Current%5E2%28t%29%5Ccdot+dt%5C%5C%0A%5C%5C%0A%5C%5C%0A%26+%5Csum_%7B0%7D%5E%7BT%7D+Voltage%5Ccdot+Current+%3D+R_%5CSigma+%5Csum_%7B0%7D%5E%7BT%7D+Current%5E2%0A%5Cend%7Balign%2A%7D)
+
 
 R<sub>&Sigma;</sub> - equivalent summary resistance of motor circuit.
 
@@ -17,16 +26,17 @@ Sums must be calculated from one zero-crossing of current to next zero-crossing 
 
 The motor speed can be calculated as follows:
 
-[![motor speed formula](http://mathurl.com/y7m5ccnq.png)](http://mathurl.com/y7m5ccnq)
 
-<!--
-$R_\Sigma = R_{ekv} + R_{motor}\\
-\\
-R_{ekv} = \frac{\sum_{0}^{T} Voltage\cdot Current}{\sum_{0}^{T} Current^2} - R_{motor}\\
+![\begin{align*}
+& R_\Sigma = R_{ekv} + R_{motor}\\
 \\
 \\
-RPM = \frac{R_{ekv}}{K}$
--->
+& R_{ekv} = \frac{\sum_{0}^{T} Voltage\cdot Current}{\sum_{0}^{T} Current^2} - R_{motor}\\
+\\
+\\
+& RPM = \frac{R_{ekv}}{K}
+\end{align*}](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+%5Cbegin%7Balign%2A%7D%0A%26+R_%5CSigma+%3D+R_%7Bekv%7D+%2B+R_%7Bmotor%7D%5C%5C%0A%5C%5C%0A%5C%5C%0A%26+R_%7Bekv%7D+%3D+%5Cfrac%7B%5Csum_%7B0%7D%5E%7BT%7D+Voltage%5Ccdot+Current%7D%7B%5Csum_%7B0%7D%5E%7BT%7D+Current%5E2%7D+-+R_%7Bmotor%7D%5C%5C%0A%5C%5C%0A%5C%5C%0A%26+RPM+%3D+%5Cfrac%7BR_%7Bekv%7D%7D%7BK%7D%0A%5Cend%7Balign%2A%7D)
+
 
 - R<sub>ekv</sub> - equivalent resistance which is created by the back-EMF.
 - R<sub>motor</sub> - motor resistance in Ohms.
@@ -47,22 +57,21 @@ current's behavior.
 If motor isn't rotating, active power is equivalent to Joule power
 on motor resistance. Integrals can be replaced by sums.
 
-[![motor power balance equations](http://mathurl.com/ybwtldyx.png)](http://mathurl.com/ybwtldyx)
 
-<!--
-$\int_{0}^{t} Current*Voltage*dt = R *\int_{0}^{t} Current^2 *dt \\
+![\begin{align*}
+& \int_{0}^{t} Current*Voltage*dt = R *\int_{0}^{t} Current^2 *dt \\
 \\
-\sum_{0}^{N} (Current*Voltage) = R * \sum_{0}^{N} (Current^2)$
--->
+\\
+& \sum_{0}^{N} (Current*Voltage) = R * \sum_{0}^{N} (Current^2)
+\end{align*}](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+%5Cbegin%7Balign%2A%7D%0A%26+%5Cint_%7B0%7D%5E%7Bt%7D+Current%2AVoltage%2Adt+%3D+R+%2A%5Cint_%7B0%7D%5E%7Bt%7D+Current%5E2+%2Adt+%5C%5C%0A%5C%5C%0A%5C%5C%0A%26+%5Csum_%7B0%7D%5E%7BN%7D+%28Current%2AVoltage%29+%3D+R+%2A+%5Csum_%7B0%7D%5E%7BN%7D+%28Current%5E2%29%0A%5Cend%7Balign%2A%7D)
+
 
 Count all ticks from triac opening to moment
 when current crosses zero.
 
-[![motor resistance formula](http://mathurl.com/y83s3tu6.png)](http://mathurl.com/y83s3tu6)
 
-<!--
-$R = \frac{\sum_{0}^{N} (Current*Voltage)}{\sum_{0}^{N} (Current^2)}$
--->
+![R = \frac{\sum_{0}^{N} (Current*Voltage)}{\sum_{0}^{N} (Current^2)}](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+R+%3D+%5Cfrac%7B%5Csum_%7B0%7D%5E%7BN%7D+%28Current%2AVoltage%29%7D%7B%5Csum_%7B0%7D%5E%7BN%7D+%28Current%5E2%29%7D)
+
 
 **Compensating armature frequency-related losses**
 
