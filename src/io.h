@@ -38,7 +38,7 @@ public:
 
     // Output data to process in main loop. In theory should have 1 element max.
     // Leave room for 3 more for sure.
-    etl::queue_spsc_atomic<io_data_t, 4, etl::memory_model::MEMORY_MODEL_SMALL> out;
+    etl::queue_spsc_atomic<io_data_t, 10, etl::memory_model::MEMORY_MODEL_SMALL> out;
 
     void configure()
     {
