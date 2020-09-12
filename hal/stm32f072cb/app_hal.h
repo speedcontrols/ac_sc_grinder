@@ -12,7 +12,7 @@
 
 // Frequency of measurements & state updates.
 // Currently driven by ADC for simplicity.
-#define APP_TICK_FREQUENCY 17857
+#define APP_TICK_FREQUENCY 9146
 
 namespace hal {
 
