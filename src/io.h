@@ -112,6 +112,7 @@ public:
 
         prev_voltage = io_data.voltage;
 
+        count_phase(io_data);
         triac_update(io_data);
 
         out.push(io_data); // returns false on overflow, but no exception
@@ -139,18 +140,46 @@ private:
     bool once_zero_crossed = false;
     bool once_period_counted = false;
 
+
+    void count_phase(io_data_t &io_data)
+    {
+        if (io_data.zero_cross_up || io_data.zero_cross_down)
+        {
+            if (once_zero_crossed) once_period_counted = true;
+
+            once_zero_crossed = true;
+
+            // If full half-period was counted at least once, save number of
+            // ticks in half-period
+            if (once_period_counted)
+            {
+                // Measure period on positive half wave only
+                if (io_data.zero_cross_down) positive_period_in_ticks = phase_counter;
+            }
+
+            phase_counter = 0;
+            return;
+        }
+
+        phase_counter++;
+    }
+
+
     void triac_update(io_data_t &io_data)
     {
         // Poor man zero cross check
-        if (io_data.zero_cross_up || io_data.zero_cross_down) triac_rearm(io_data);
-
-        // If period_in_ticks is not yet detected, only increment phase_counter,
-        // don't touch triac.
-        if (!once_period_counted)
+        if (io_data.zero_cross_up || io_data.zero_cross_down)
         {
-            phase_counter++;
-            return;
+            triac_open_done = false;
+            triac_close_done = false;
+
+            // Make sure to disable triac signal, if reset (zero cross) happens
+            // immediately after triac enabled
+            hal::triac_ignition_off();
         }
+
+        // If period_in_ticks is not yet detected, don't touch triac.
+        if (!once_period_counted) return;
 
         // We keep ignition open continiously after calculated phase shift. Pulse
         // commutation is not safe because triac current can flow after voltage
@@ -193,34 +222,7 @@ private:
                 hal::triac_ignition_on();
             }
         }
-
-        phase_counter++;
     }
-
-    // Happens on every zero cross
-    void triac_rearm(io_data_t &io_data)
-    {
-        if (once_zero_crossed) once_period_counted = true;
-
-        once_zero_crossed = true;
-
-        // If full half-period was counted at least once, save number of
-        // ticks in half-period
-        if (once_period_counted)
-        {
-            // Measure period on positive half wave only
-            if (io_data.zero_cross_down) positive_period_in_ticks = phase_counter;
-        }
-
-        phase_counter = 0;
-        triac_open_done = false;
-        triac_close_done = false;
-
-        // Make sure to disable triac signal, if reset (zero cross) happens
-        // immediately after triac enabled
-        hal::triac_ignition_off();
-    }
-
 };
 
 
