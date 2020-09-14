@@ -35,23 +35,31 @@ public:
 
         YIELD_UNTIL(io_data.zero_cross_up, false);
 
-        buffer_idx = 0;
+        //
+        // Calculate thresholds for current and power
+        // to drop noise in speed sensor
+        //
 
-        //
-        // Record noise
-        //
+        buffer_idx = 0;
+        acc_p_sum_div_1024 = 0;
+        acc_i_sum_div_4 = 0;
 
         while (!io_data.zero_cross_down) {
             YIELD(false);
 
-            if (buffer_idx < calibrator_rl_buffer_length) {
-                voltage_buffer[buffer_idx] = fix16_to_float(io_data.voltage);
-                current_buffer[buffer_idx] = fix16_to_float(io_data.current);
-                buffer_idx++;
-            }
+            acc_p_sum_div_1024 += fix16_mul(io_data.voltage >> 8, io_data.current >> 2);
+            acc_i_sum_div_4 += io_data.current >> 2;
+            buffer_idx++;
         }
 
-        process_thresholds();
+
+        io.cfg_current_offset = (acc_i_sum_div_4 << 2) / buffer_idx;
+        // Set power treshold 4x of noise value
+        meter.cfg_min_power_treshold = 4 * fix16_mul(
+            acc_p_sum_div_1024,
+            fix16_div(1024, buffer_idx)
+        );
+
 
         //
         // Measure checkpoints
@@ -68,6 +76,8 @@ public:
             while (!r_stability_filter.is_stable())
             {
                 buffer_idx = 0;
+                acc_p_sum_div_1024 = 0;
+                acc_i2_sum_div_16 = 0;
                 zero_cross_down_offset = 0;
 
                 io.setpoint = 0;
@@ -84,12 +94,16 @@ public:
 
                 io.setpoint = meter.cfg_r_table_setpoints[r_interp_table_index];
 
-                while (!io_data.zero_cross_down) {
+                while (!io_data.zero_cross_down)
+                {
                     // Safety check. Restart on out of bounds.
                     if (buffer_idx >= calibrator_rl_buffer_length) return false;
 
-                    voltage_buffer[buffer_idx] = fix16_to_float(io_data.voltage);
-                    current_buffer[buffer_idx] = fix16_to_float(io_data.current);
+                    voltage_buffer[buffer_idx] = io_data.voltage;
+
+                    acc_p_sum_div_1024 += fix16_mul(io_data.voltage >> 8, io_data.current >> 2);
+                    acc_i2_sum_div_16 += fix16_mul(io_data.current >> 2, io_data.current >> 2);
+
                     buffer_idx++;
 
                     YIELD(false);
@@ -104,10 +118,14 @@ public:
 
                 io.setpoint = 0;
 
-                while (!io_data.zero_cross_up && buffer_idx < calibrator_rl_buffer_length) {
-                    // Record current & emulate voltage
-                    voltage_buffer[buffer_idx] = - voltage_buffer[buffer_idx - zero_cross_down_offset];
-                    current_buffer[buffer_idx] = fix16_to_float(io_data.current);
+                while (!io_data.zero_cross_up && buffer_idx < calibrator_rl_buffer_length)
+                {
+                    acc_p_sum_div_1024 += fix16_mul(
+                        - (voltage_buffer[buffer_idx - zero_cross_down_offset] >> 8),
+                        io_data.current >> 2
+                    );
+                    acc_i2_sum_div_16 += fix16_mul(io_data.current >> 2, io_data.current >> 2);
+
                     buffer_idx++;
 
                     YIELD(false);
@@ -126,9 +144,12 @@ public:
 
                 io.setpoint = 0;
 
-                // Process collected data. That may take a lot of time, but we don't care
-                // about triac at this moment
-                r_stability_filter.push(fix16_from_float(calculate_r()));
+                // Active power is equal to Joule power in this case
+                // Current^2 * R = P
+                // R = P / Current^2
+                r_stability_filter.push(
+                    fix16_div(acc_p_sum_div_1024, acc_i2_sum_div_16) << 8
+                );
 
             }
 
@@ -161,13 +182,16 @@ public:
 
 private:
 
-    float voltage_buffer[calibrator_rl_buffer_length];
-    float current_buffer[calibrator_rl_buffer_length];
+    fix16_t voltage_buffer[calibrator_rl_buffer_length];
 
     float i_avg = 0;
 
     uint32_t buffer_idx = 0;
     uint32_t zero_cross_down_offset = 0;
+
+    fix16_t acc_p_sum_div_1024 = 0;
+    fix16_t acc_i_sum_div_4 = 0;
+    fix16_t acc_i2_sum_div_16 = 0;
 
     // Holds current index in R interpolation table
     int r_interp_table_index = 0;
@@ -176,57 +200,7 @@ private:
 
     StabilityFilterTemplate<F16(5)> r_stability_filter;
 
-    enum State {
-        INIT,
-        WAIT_ZERO_CROSS,
-        RECORD_NOIZE,
-        R_MEASUE_LOOP,
-        R_WAIT_STABLE_LOOP,
-        WAIT_ZERO_CROSS_2,
-        RECORD_POSITIVE_WAVE,
-        RECORD_NEGATIVE_WAVE,
-        WAIT_NEGATIVE_WAVE_2,
-        DEMAGNETIZE,
-        CALCULATE
-    } state = INIT;
-
     int ticks_cnt = 0;
-
-    // Calculate thresholds for current and power to drop noise in speed sensor
-    void process_thresholds()
-    {
-        float i_sum = 0;
-        float p_sum = 0;
-
-        for (uint32_t i = 0; i < buffer_idx; i++)
-        {
-            i_sum += current_buffer[i];
-            p_sum += voltage_buffer[i] * current_buffer[i];
-        }
-
-        io.cfg_current_offset = fix16_from_float(i_sum / (float)buffer_idx);
-        // Set power treshold 4x of noise value
-        meter.cfg_min_power_treshold = fix16_from_float(p_sum * 4 / (float)buffer_idx);
-    }
-
-    float calculate_r()
-    {
-        float p_sum = 0;  // active power
-        float i2_sum = 0; // square of current
-
-        for (uint32_t i = 0; i < buffer_idx; i++)
-        {
-            p_sum += voltage_buffer[i] * current_buffer[i];
-            i2_sum += current_buffer[i] * current_buffer[i];
-        }
-
-        // Active power is equal to Joule power in this case
-        // Current^2 * R = P
-        // R = P / Current^2
-        float R = p_sum / i2_sum;
-
-        return R;
-    }
 };
 
 #endif

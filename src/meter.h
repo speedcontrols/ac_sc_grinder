@@ -36,7 +36,7 @@ public:
     // to interpolate motor resistance. Autoupdated by triac driver.
     //fix16_t in_triac_setpoint = 0;
 
-    fix16_t cfg_r_table_setpoints[CFG_R_INTERP_TABLE_LENGTH] = {
+    const fix16_t cfg_r_table_setpoints[CFG_R_INTERP_TABLE_LENGTH] = {
         F16(0.1),
         F16(0.15),
         F16(0.2),
@@ -45,6 +45,8 @@ public:
         F16(0.6),
         F16(1.0),
     };
+
+    fix16_t cfg_r_table_setpoints_inerp_inv[CFG_R_INTERP_TABLE_LENGTH] = {};
 
     // Should be called with 40kHz frequency
     void tick(io_data_t &io_data)
@@ -71,6 +73,21 @@ public:
             );
         }
 
+        // Pre-calclate inverted coeff-s to avoid divisions
+        // in `get_motor_resistance()` 
+        cfg_r_table_setpoints_inerp_inv[0] = fix16_one;
+        for (int i = 1; i < CFG_R_INTERP_TABLE_LENGTH; i++)
+        {
+            if (cfg_r_table[i] - cfg_r_table[i - 1] > 0)
+            {
+                cfg_r_table_setpoints_inerp_inv[i] = fix16_div(
+                    fix16_one,
+                    cfg_r_table_setpoints[i] - cfg_r_table_setpoints[i - 1]
+                );
+            }
+            else cfg_r_table_setpoints_inerp_inv[i] = fix16_one;
+        }
+
         is_r_calibrated = (cfg_r_table[0] == fix16_from_float(R_CAL_CHECK_MARKER)) ? false : true;
 
         reset_state();
@@ -81,8 +98,8 @@ public:
         once_zero_crossed = false;
         speed = 0;
 
-        p_sum_div_16 = 0;
-        i2_sum = 0;
+        p_sum_div_1024 = 0;
+        i2_sum_div_16 = 0;
 
         voltage_buffer_head = 0;
         voltage_buffer_tick_counter = 0;
@@ -95,6 +112,7 @@ private:
 
     // Motor resistance interpolation table
     fix16_t cfg_r_table[CFG_R_INTERP_TABLE_LENGTH];
+    fix16_t cfg_r_interp_scale_inv_table[CFG_R_INTERP_TABLE_LENGTH];
 
     fix16_t get_motor_resistance(fix16_t setpoint)
     {
@@ -109,9 +127,9 @@ private:
             {
                 fix16_t range_start = cfg_r_table[i];
                 fix16_t range_end = cfg_r_table[i + 1];
-                fix16_t scale = fix16_div(
+                fix16_t scale = fix16_mul(
                     setpoint - cfg_r_table_setpoints[i],
-                    cfg_r_table_setpoints[i + 1] - cfg_r_table_setpoints[i]
+                    cfg_r_table_setpoints_inerp_inv[i + 1]
                 );
 
                 return fix16_mul(range_start, fix16_one - scale) + fix16_mul(range_end, scale);
@@ -121,8 +139,8 @@ private:
         return cfg_r_table[0];
     }
 
-    fix16_t p_sum_div_16 = 0;  // active power / 16
-    fix16_t i2_sum = 0; // square of current
+    fix16_t p_sum_div_1024 = 0;  // active power / 1024
+    fix16_t i2_sum_div_16 = 0;       // square of current / 16
 
     // voltage with extrapolated negative half-wave
     fix16_t virtual_voltage;
@@ -181,9 +199,9 @@ private:
         }
 
         // Calculate sums
-        // To prevent p_sum overflow divide power value by 16
-        p_sum_div_16 += fix16_mul(virtual_voltage, io_data.current) >> 4;
-        i2_sum += fix16_mul(io_data.current, io_data.current);
+        // Scale values to prevent overflow (but sill keep dsired precision)
+        p_sum_div_1024 += fix16_mul(virtual_voltage >> 8, io_data.current >> 2);
+        i2_sum_div_16 += fix16_mul(io_data.current >> 2, io_data.current >> 2);
 
         // Calculate speed at end of negative half-wave
         // In this case active power is equivalent to
@@ -195,18 +213,18 @@ private:
         {
             // p_sum was divided by 16 to prevent overflow,
             // so i2_sum must be divided by 16 now
-            fix16_t r_ekv = fix16_div(p_sum_div_16, i2_sum >> 4) - get_motor_resistance(io.setpoint);
+            fix16_t r_ekv = (fix16_div(p_sum_div_1024, i2_sum_div_16) << 8) - get_motor_resistance(io.setpoint);
 
             speed = fix16_div(r_ekv, cfg_rekv_to_speed_factor);
 
             // Attempt to drop noise on calibration phase
-            if (p_sum_div_16 / (int)voltage_buffer_head * 16 < cfg_min_power_treshold) speed = 0;
+            if (p_sum_div_1024 < ((int64_t)cfg_min_power_treshold * voltage_buffer_head) >> 10) speed = 0;
 
             // Clamp calculated speed value, speed can't be negative
             if (speed < 0) speed = 0;
 
-            p_sum_div_16 = 0;
-            i2_sum = 0;
+            p_sum_div_1024 = 0;
+            i2_sum_div_16 = 0;
             voltage_buffer_head = 0;
         }
     }
