@@ -10,6 +10,11 @@
 #include "etl/queue_spsc_atomic.h"
 
 
+// We can measure only positive volage wave. Record it to emulate negative one.
+// For 50/60Hz, worst case + some reserve is (APP_TICK_FREQUENCY / 48 / 2).
+constexpr static int voltage_buffer_length = APP_TICK_FREQUENCY / 48 / 2;
+
+
 // Don't open triac at the end of wave. Helps to avoid issues if measured zero
 // cross point drifted a bit.
 #define TRIAC_ZERO_TAIL_LENGTH 4
@@ -106,18 +111,31 @@ public:
         io_data.voltage = fix16_mul(adc_voltage << 4, v_ref) * 201;
 
 
-        if (prev_voltage == 0 && io_data.voltage > 0) io_data.zero_cross_up = true;
+        if (prev_voltage == 0 && io_data.voltage > 0)
+        {
+            io_data.zero_cross_up = true;
+            positive_wave = true;
+        }
         else io_data.zero_cross_up = false;
 
-        if (prev_voltage > 0 && io_data.voltage == 0) io_data.zero_cross_down = true;
+        if (prev_voltage > 0 && io_data.voltage == 0)
+        {
+            io_data.zero_cross_down = true;
+            positive_wave = false;
+        }
         else io_data.zero_cross_down = false;
 
         prev_voltage = io_data.voltage;
 
         count_phase(io_data);
         triac_update(io_data);
+        emulate_negative_volage(io_data);
 
-        out.push(io_data); // returns false on overflow, but no exception
+        // Start emit data only after AC wave sync done.
+        if (once_period_counted)
+        {
+            out.push(io_data); // returns false on overflow, but no exception
+        }
     }
 
 private:
@@ -141,6 +159,9 @@ private:
 
     bool once_zero_crossed = false;
     bool once_period_counted = false;
+    bool positive_wave = false;
+
+    fix16_t voltage_buffer[voltage_buffer_length];
 
 
     void count_phase(io_data_t &io_data)
@@ -149,14 +170,16 @@ private:
         {
             if (once_zero_crossed) once_period_counted = true;
 
-            once_zero_crossed = true;
+            if (io_data.zero_cross_up) once_zero_crossed = true;
 
             // If full half-period was counted at least once, save number of
             // ticks in half-period
             if (once_period_counted)
             {
                 // Measure period on positive half wave only
-                if (io_data.zero_cross_down) positive_period_in_ticks = phase_counter;
+                if (io_data.zero_cross_down) {
+                    positive_period_in_ticks = phase_counter + 1;
+                }
             }
 
             phase_counter = 0;
@@ -224,6 +247,29 @@ private:
                 hal::triac_ignition_on();
             }
         }
+    }
+
+
+    void emulate_negative_volage(io_data_t &io_data)
+    {
+        if (positive_wave)
+        {
+            // bounds check & record
+            if (phase_counter < voltage_buffer_length) {
+                voltage_buffer[phase_counter] = io_data.voltage;
+            }
+        }
+        else
+        {
+            // replay
+            if (phase_counter < voltage_buffer_length &&
+                phase_counter < positive_period_in_ticks)
+            {
+                io_data.voltage = -voltage_buffer[phase_counter];
+            }
+            else io_data.voltage = 0;
+        }
+        
     }
 };
 

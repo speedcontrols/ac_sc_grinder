@@ -11,11 +11,6 @@
 
 #define R_MEASURE_ATTEMPTS 3
 
-// Array size to record up to half of current & voltage positive wave.
-// For 50/60Hz, worst case + some reserve is (APP_TICK_FREQUENCY / 48).
-constexpr int calibrator_rl_buffer_length = APP_TICK_FREQUENCY / 48;
-
-
 class CalibratorStatic
 {
 public:
@@ -40,25 +35,23 @@ public:
         // to drop noise in speed sensor
         //
 
-        buffer_idx = 0;
-        acc_p_sum_div_1024 = 0;
-        acc_i_sum_div_4 = 0;
+        acc_counter = 0;
+        acc_p_sum_2e32 = 0;
+        acc_i_sum = 0;
 
         while (!io_data.zero_cross_down) {
             YIELD(false);
 
-            acc_p_sum_div_1024 += fix16_mul(io_data.voltage >> 8, io_data.current >> 2);
-            acc_i_sum_div_4 += io_data.current >> 2;
-            buffer_idx++;
+            acc_p_sum_2e32 += (int64_t)(io_data.voltage) * io_data.current;
+            acc_i_sum += io_data.current;
+            acc_counter++;
         }
 
 
-        io.cfg_current_offset = (acc_i_sum_div_4 << 2) / buffer_idx;
+        io.cfg_current_offset = acc_i_sum / acc_counter;
         // Set power treshold 4x of noise value
-        meter.cfg_min_power_treshold = 4 * fix16_mul(
-            acc_p_sum_div_1024,
-            fix16_div(1024, buffer_idx)
-        );
+        if (acc_p_sum_2e32 < 0) acc_p_sum_2e32 = 0;
+        meter.cfg_min_power_treshold = (acc_p_sum_2e32 >> 16) * 4;
 
 
         //
@@ -75,10 +68,9 @@ public:
             //
             while (!r_stability_filter.is_stable())
             {
-                buffer_idx = 0;
-                acc_p_sum_div_1024 = 0;
-                acc_i2_sum_div_16 = 0;
-                zero_cross_down_offset = 0;
+                acc_counter = 0;
+                acc_p_sum_2e32 = 0;
+                acc_i2_sum_2e32 = 0;
 
                 io.setpoint = 0;
 
@@ -93,40 +85,20 @@ public:
                 //
 
                 io.setpoint = meter.cfg_r_table_setpoints[r_interp_table_index];
+                acc_counter = 0;
 
-                while (!io_data.zero_cross_down)
+                // skip current zero point to force `while` wait next cross
+                YIELD(false);
+
+                while (!io_data.zero_cross_up)
                 {
-                    // Safety check. Restart on out of bounds.
-                    if (buffer_idx >= calibrator_rl_buffer_length) return false;
+                    // Don't continue with triac on negative wave, measure only.
+                    if (io_data.zero_cross_down) io.setpoint = 0;
 
-                    voltage_buffer[buffer_idx] = io_data.voltage;
-
-                    acc_p_sum_div_1024 += fix16_mul(io_data.voltage >> 8, io_data.current >> 2);
-                    acc_i2_sum_div_16 += fix16_mul(io_data.current >> 2, io_data.current >> 2);
-
-                    buffer_idx++;
-
-                    YIELD(false);
-                }
-
-                zero_cross_down_offset = buffer_idx;
-
-                //
-                // Record negative wave. Continue when got enough data
-                // (buffer ended or next zero cross found),
-                //
-
-                io.setpoint = 0;
-
-                while (!io_data.zero_cross_up && buffer_idx < calibrator_rl_buffer_length)
-                {
-                    acc_p_sum_div_1024 += fix16_mul(
-                        - (voltage_buffer[buffer_idx - zero_cross_down_offset] >> 8),
-                        io_data.current >> 2
-                    );
-                    acc_i2_sum_div_16 += fix16_mul(io_data.current >> 2, io_data.current >> 2);
-
-                    buffer_idx++;
+                    
+                    acc_p_sum_2e32 += (int64_t)io_data.voltage * io_data.current;
+                    acc_i2_sum_2e32 += (uint64_t)io_data.current * io_data.current;
+                    acc_counter++;
 
                     YIELD(false);
                 }
@@ -147,10 +119,16 @@ public:
                 // Active power is equal to Joule power in this case
                 // Current^2 * R = P
                 // R = P / Current^2
-                r_stability_filter.push(
-                    fix16_div(acc_p_sum_div_1024, acc_i2_sum_div_16) << 8
-                );
+                if (acc_p_sum_2e32 < 0) acc_p_sum_2e32 = 0;
 
+                uint64_t p = acc_p_sum_2e32, i2 = acc_i2_sum_2e32;
+                // Normalize to 31 bit, to use fix16_div
+                while (p & 0xFFFFFFFF80000000UL) {
+                    p = p >> 1;
+                    i2 = i2 >> 1;
+                }
+
+                r_stability_filter.push(fix16_div((fix16_t)p, (fix16_t)i2));
             }
 
             r_interp_result[r_interp_table_index++] = r_stability_filter.average();
@@ -182,16 +160,13 @@ public:
 
 private:
 
-    fix16_t voltage_buffer[calibrator_rl_buffer_length];
-
     float i_avg = 0;
 
-    uint32_t buffer_idx = 0;
-    uint32_t zero_cross_down_offset = 0;
+    uint16_t acc_counter = 0;
 
-    fix16_t acc_p_sum_div_1024 = 0;
-    fix16_t acc_i_sum_div_4 = 0;
-    fix16_t acc_i2_sum_div_16 = 0;
+    int64_t acc_p_sum_2e32 = 0;
+    uint32_t acc_i_sum = 0;
+    uint64_t acc_i2_sum_2e32 = 0;
 
     // Holds current index in R interpolation table
     int r_interp_table_index = 0;
