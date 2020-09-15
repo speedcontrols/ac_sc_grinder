@@ -68,8 +68,10 @@ public:
         // Apply filters
         uint16_t adc_voltage = (uint16_t)truncated_mean(adc_voltage_buf, ADC_FETCH_PER_TICK, F16(1.1));
         uint16_t adc_current = (uint16_t)truncated_mean(adc_current_buf, ADC_FETCH_PER_TICK, F16(1.1));
-        uint16_t adc_knob = (uint16_t)truncated_mean(adc_knob_buf, ADC_FETCH_PER_TICK, F16(1.1));
         uint16_t adc_v_refin = (uint16_t)truncated_mean(adc_v_refin_buf, ADC_FETCH_PER_TICK, F16(1.1));
+        // Skip first filter for knob, o save CPU (second filter is enough)
+        //uint16_t adc_knob = (uint16_t)truncated_mean(adc_knob_buf, ADC_FETCH_PER_TICK, F16(1.1));
+        uint16_t adc_knob = adc_knob_buf[0];
 
         // Now process the rest...
 

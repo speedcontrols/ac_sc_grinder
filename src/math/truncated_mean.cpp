@@ -53,7 +53,12 @@ uint32_t truncated_mean(uint16_t *src, uint8_t count, fix16_t window)
 
     int mean = ((s + (count >> 1)) * inv_div[count]) >> 16;
 
-    int sigma_square = (s2 - (s * s / count)) / (count - 1);
+    // sigma_square = (s2 - (s * s / count)) / (count - 1);
+    int sigma_square = fix16_mul(
+        s2 - fix16_mul(s * s, inv_div[count]),
+        inv_div[count - 1]
+    );
+
     // quick & dirty multiply to win^2, when win is in fix16 format.
     // we suppose win is 1..2, and sigma^2 - 24 bits max
     int sigma_win_square = ((((window >> 8) * (window >> 8)) >> 12) * sigma_square) >> 4;
