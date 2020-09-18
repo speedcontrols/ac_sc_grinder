@@ -14,8 +14,9 @@ jobs:
           - platformio update
         script:
           # Test builds status
-          - platformio run -e hardware_next_usb
-          - platformio run -e hardware_current
+          - platformio run -e hw_v2_stm32f042f6_usb
+          - platformio run -e hw_v2_dev_stm32f072cb_usb
+          - platformio run -e hw_v1_stm32f103c8
           # Run tests
           - platformio test -e test_native
       -
@@ -32,8 +33,9 @@ jobs:
           - platformio update
         script:
           # Test builds status
-          - platformio run -e hardware_next_usb
-          - platformio run -e hardware_current
+          - platformio run -e hw_v2_stm32f042f6_usb
+          - platformio run -e hw_v2_dev_stm32f072cb_usb
+          - platformio run -e hw_v1_stm32f103c8
       -
         name: Windows
         os: windows           # Windows 10.0.17134 N/A Build 17134
@@ -47,5 +49,6 @@ jobs:
           - platformio update
         script:
           # Test builds status
-          - platformio run -e hardware_next_usb
-          - platformio run -e hardware_current
+          - platformio run -e hw_v2_stm32f042f6_usb
+          - platformio run -e hw_v2_dev_stm32f072cb_usb
+          - platformio run -e hw_v1_stm32f103c8
