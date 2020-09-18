@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 // Oversampling ratio. Used to define buffer sizes
-#define ADC_FETCH_PER_TICK 8
+#define ADC_FETCH_PER_TICK 6
 
 // How many channels are sampled "in parallel".
 // Used to define global DMA buffer size.
@@ -12,7 +12,7 @@
 
 // Frequency of measurements & state updates.
 // Currently driven by ADC for simplicity.
-#define APP_TICK_FREQUENCY 9146
+#define APP_TICK_FREQUENCY 14227
 
 namespace hal {
 
