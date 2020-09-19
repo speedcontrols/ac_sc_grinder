@@ -111,22 +111,7 @@ public:
         io_data.voltage = fix16_mul(adc_voltage << 4, v_ref) * 201;
 
 
-        if (prev_voltage == 0 && io_data.voltage > 0)
-        {
-            io_data.zero_cross_up = true;
-            positive_wave = true;
-        }
-        else io_data.zero_cross_up = false;
-
-        if (prev_voltage > 0 && io_data.voltage == 0)
-        {
-            io_data.zero_cross_down = true;
-            positive_wave = false;
-        }
-        else io_data.zero_cross_down = false;
-
-        prev_voltage = io_data.voltage;
-
+        check_zero_cross(io_data);
         count_phase(io_data);
         triac_update(io_data);
         emulate_negative_volage(io_data);
@@ -150,21 +135,54 @@ private:
     // Triac states
     //
 
-    uint32_t phase_counter = 0; // increment every tick
+    uint16_t phase_counter = 0; // increment every tick
     bool triac_open_done = false;
     bool triac_close_done = false;
 
     // Holds measured number of ticks per positive half-period
-    uint32_t positive_period_in_ticks = 0;
+    uint16_t positive_period_in_ticks = 0;
 
     bool once_zero_crossed = false;
     bool once_period_counted = false;
     bool positive_wave = false;
+    uint16_t zero_cross_block_cnt = 0;
+    bool next_is_zero_cross_down = false;
 
     fix16_t voltage_buffer[voltage_buffer_length];
 
 
-    void count_phase(io_data_t &io_data)
+    inline void check_zero_cross(io_data_t &io_data)
+    {
+        if (prev_voltage == 0 && io_data.voltage > 0 && zero_cross_block_cnt == 0)
+        {
+            io_data.zero_cross_up = true;
+            positive_wave = true;
+            zero_cross_block_cnt = 10;
+        }
+        else io_data.zero_cross_up = false;
+
+        // Cross down should go 1 tick after condition met, to be symmetric
+        // with cross up condition.
+        if (prev_voltage > 0 && io_data.voltage == 0 && zero_cross_block_cnt == 0)
+        {
+            next_is_zero_cross_down = true;
+            zero_cross_block_cnt = 10;
+        }
+
+        if (next_is_zero_cross_down) {
+            next_is_zero_cross_down = false;
+            io_data.zero_cross_down = true;
+            positive_wave = false;
+        }
+        else io_data.zero_cross_down = false;
+
+        if (zero_cross_block_cnt > 0) zero_cross_block_cnt--;
+
+        prev_voltage = io_data.voltage;
+    }
+
+
+    inline void count_phase(io_data_t &io_data)
     {
         if (io_data.zero_cross_up || io_data.zero_cross_down)
         {
@@ -190,7 +208,7 @@ private:
     }
 
 
-    void triac_update(io_data_t &io_data)
+    inline void triac_update(io_data_t &io_data)
     {
         // Poor man zero cross check
         if (io_data.zero_cross_up || io_data.zero_cross_down)
@@ -250,7 +268,7 @@ private:
     }
 
 
-    void emulate_negative_volage(io_data_t &io_data)
+    inline void emulate_negative_volage(io_data_t &io_data)
     {
         if (positive_wave)
         {
