@@ -25,13 +25,3 @@ cheap. Boards for other models are left to volunteers.
 ## Build manual
 
 [See illustrated instruction](https://github.com/speedcontrols/ac_sc_grinder/blob/master/doc/assembly.md).
-
-
-## Development notes
-
-Everything is done in `PlatformIO`. If you wish to update yaml config and
-regenerate headers, you may need `node.js` and run `npm run config`.
-
-Note, this PCB has no AC isolation! That's ok for normal operation, but if you
-plan to debug firmware via USB, you MUST use [USB isolator](https://www.aliexpress.com/wholesale?SearchText=usb+isolator)
-module.

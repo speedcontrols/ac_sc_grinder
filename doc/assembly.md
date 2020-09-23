@@ -1,6 +1,8 @@
 Device assembly <!-- omit in toc -->
 ===============
 
+- [Supported grinders & PCBs](#supported-grinders--pcbs)
+  - [Hilda 180W (gray) and similar](#hilda-180w-gray-and-similar)
 - [Required components](#required-components)
 - [Extract some parts from original board](#extract-some-parts-from-original-board)
 - [Solder PCB top and bottom](#solder-pcb-top-and-bottom)
@@ -11,24 +13,38 @@ Device assembly <!-- omit in toc -->
 - [Firmware tune](#firmware-tune)
 
 
+## Supported grinders & PCBs
+
+### Hilda 180W (gray) and similar
+
+- [link1](https://www.aliexpress.com/af/hilda-180w.html?SortType=total_tranpro_desc)
+- [link2](https://www.banggood.com/40Pcs-180W-230V-Electric-Hand-Drill-Rotary-Tool-Mini-Electric-Grinder-Cutting-Polishing-Tools-p-1291185.html)
+
+<img src="./images/hilda_assembled.jpg" width="25%">
+
+PCB:
+
+- [v1 board](https://easyeda.com/speed/AC-speed-control-for-grinder) (recommended).
+- [v2 development board](https://easyeda.com/speed/ac-speed-control-v2-dev). Has
+  additional interfaces. Used by developers to prototype new features.
+
+
 ## Required components
 
 \- | Name | Comment
 -----|-------------|--------
-1 | [Hilda 180W](https://www.aliexpress.com/af/hilda-180w.html?SortType=total_tranpro_desc) grinder | Such grinders are available under other labels. Any, exactly as on photos below, will be ok.
-2 | [PCB & Components](https://easyeda.com/speed/AC-speed-control-for-grinder) | Go to EasyEda project page and order both in couple of clicks. If you order PCB first, components second, then you will be able to join delivery and save some bucks.
-3 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Required to upload firmware, only 2$. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
-4 | PCB protective coating | [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer).
-5 | [Male](https://www.aliexpress.com/item/-/32700932502.html) & [female](https://www.aliexpress.com/item/-/32593170276.html) 2.8x0.5mm power terminals | Optional. You can solder power wires directly.
+1 | Grinder mini drill | See links above.
+2 | PCB & Components | See links above, acording to your model. If you order PCB first, components second, you will be able to join delivery and save some bucks.
+3 | PCB protective coating | [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer).
+4 | [Male](https://www.aliexpress.com/item/-/32700932502.html) & [female](https://www.aliexpress.com/item/-/32593170276.html) 2.8x0.5mm power terminals | Optional. You can solder power wires directly.
+5 | [22 AWG wire](https://www.aliexpress.com/item/32854919883.html) | Stainless steel, for SMT stencil only. Position over PCB, via reference holes.
+6 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Only for boars without USB connector. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
 
+Note, if you have soldering air gun, it's good idea to order SMT stencil to
+simplify assembly. Select custom stencil size 100*100mm for cheap delivery.
 
-**Note on order at LCSC.** When you use "Order at LCSC" button to import BOM,
-check "Part Match Confidence" column to filter garbage. Correct items usually
-have 100% match confidence value.
-
-![BOM import match confidence](./images/lcsc_import.png)
-
-Remove items `PIN 1 MM`, `PIN 3*0.5 MM` & `HILDA POTENTIOMETER`.
+**Important!** If you order SMT stencil, add text note to your order: "**make
+stencil according to paste mask file and don't forget corner holes**".
 
 
 ## Extract some parts from original board
@@ -37,9 +53,9 @@ You need:
 
 - Potentiometer.
 - Motor terminals.
-- Filter capacitor (0.1uF 275v, attached in parallel to power).
+- Filter capacitor (optional, if attached in parallel to power).
 
-![Reused components from original board](./images/old_pcb_components.jpg)
+<img src="./images/old_pcb_components.jpg" width="60%" alt="Reused components from original board">
 
 
 ## Solder PCB top and bottom
@@ -49,11 +65,11 @@ flux cleanup phase, some solvents can wash off speed marks.
 
 PCB top:
 
-![PCB top side](./images/pcb_top.jpg)
+<img src="./images/pcb_top.jpg" width="60%" alt="PCB top side">
 
 PCB bottom:
 
-![PCB bottom side](./images/pcb_bottom.jpg)
+<img src="./images/pcb_bottom.jpg" width="60%" alt="PCB bottom side">
 
 
 ## Cleanup PCB
@@ -69,11 +85,11 @@ fits into case. Don't forget to remove flux again.
 
 PCB with speed knob & filter capacitor:
 
-![PCB with all components](./images/pcb_full.jpg)
+<img src="./images/pcb_full.jpg" width="60%" alt="PCB with all component">
 
 PCB in drill body:
 
-![PCB in case](./images/pcb_and_case.jpg)
+<img src="./images/pcb_and_case.jpg" width="60%" alt="PCB in case">
 
 
 ## Upload firmware and test
@@ -132,7 +148,7 @@ can be spray like [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CR
 acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer),
 or something else.
 
-![Protective coat in spray and liquid form](./images/protective_coat.jpg)
+<img src="./images/protective_coat.jpg" width="60%" alt="Protective coat in spray and liquid form">
 
 If your coater is spray - put it to pepsi cap first and use cosmetic brush to
 cover PCB. Don't apply spray directly, because you need to keep terminals and
@@ -197,8 +213,5 @@ defaults:
 
 
 ## The end :) <!-- omit in toc -->
-
-![Assembled grinder with new PCB](./images/hilda_assembled.jpg)
-
 
 Enjoy!
