@@ -19,7 +19,7 @@ extern "C" void SystemClock_Config(void);
 // of override. While half of buffer is processed, another half os used to
 // collect next data.
 
-static uint16_t ADCBuffer[ADC_FETCH_PER_TICK * ADC_CHANNELS_COUNT * 2];
+static volatile uint16_t ADCBuffer[ADC_FETCH_PER_TICK * ADC_CHANNELS_COUNT * 2];
 
 // Resorted adc data for convenient use
 static uint16_t adc_voltage_buf[ADC_FETCH_PER_TICK];

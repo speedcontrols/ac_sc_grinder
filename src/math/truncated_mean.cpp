@@ -15,7 +15,7 @@
 // window - sigma multiplier (usually [1..2])
 //
 
-static fix16_t inv_div[17] = {
+static const fix16_t inv_div[17] = {
     fix16_one,
     fix16_one,
     F16(1.0/2),

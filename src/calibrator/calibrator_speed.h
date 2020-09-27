@@ -63,7 +63,7 @@ private:
     fix16_t setpoint = 0;
 
     // Set of optimal to measurement setpoint values.
-    fix16_t setpoints_preset[18] = {
+    const fix16_t setpoints_preset[18] = {
         // ... hole
         F16(0.046875),
         F16(0.0625),
