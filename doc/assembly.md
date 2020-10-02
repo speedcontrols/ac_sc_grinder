@@ -106,9 +106,11 @@ while AC plug in power socket, your USB interface may be damaged!
    - [Linux](http://docs.platformio.org/en/latest/installation.html#troubleshooting)
      instructions (how to configure `udev` rules).
    - [Windows](https://www.st.com/en/development-tools/stsw-link009.html) drivers.
-5. Attach ST-link/V2 with 4 wires, named as `VCC`, `SWCLK`, `GND`, `SWDIO`.
-6. Run via VS Code menu: `Terminal` → `Run Task...` → `PlatformIO: Upload`,
-   and wait until complete.
+5. Attach USB cable or ST-link/V2 programmer (depends on your board).
+6. In VS Code, click PlatformIO tab, expand `env:...` item with matching
+   MCU/programmer and click `Upload` (see image blow). Then wait until complete.
+
+<img src="./images/plaformio_uploader.jpg" width="60%" alt="VSCode upload firmware">
 
 Now you can assemble drill, run self-calibration and try how your "new drill"
 works.
