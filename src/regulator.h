@@ -217,7 +217,9 @@ private:
     {
         fix16_t divergence = knob_normalized - speed;
 
-        fix16_t proportional = fix16_mul(cfg_pid_p, divergence);
+        // When divergence = 0 requlator output must have voltage
+        // corresponding to idle speed, so add knob_normalized here
+        fix16_t proportional = fix16_mul(cfg_pid_p, divergence) + knob_normalized;
 
         if (pid_i_enabled)
         {
