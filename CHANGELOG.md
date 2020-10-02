@@ -1,3 +1,15 @@
+1.2.0 / WIP
+------------------
+
+- Added support of STM32F0 family (different kinds of speed optimizations).
+- Reduced RAM usage significantly.
+- Added HAL-s for new boards.
+- Fixed max possible speed.
+- Fixed internal cross-down event timing for symmetry wih cross-up.
+- Renamed build targets.
+- Code refactoring & cleanup. 
+
+
 1.1.1 / 2020-06-13
 ------------------
 
