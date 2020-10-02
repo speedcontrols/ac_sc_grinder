@@ -30,7 +30,13 @@ static void adc_raw_data_load(uint32_t adc_data_offset)
 {
     for (int sample = 0; sample < ADC_FETCH_PER_TICK; sample++)
     {
+#ifdef REVERSE_VOLTAGE
+        // When signal binded to VCC,
+        // so substract it from VCC (max 12-bit value 0x0FFF)
+        adc_voltage_buf[sample] = 0x0FFF - ADCBuffer[adc_data_offset++];
+#else
         adc_voltage_buf[sample] = ADCBuffer[adc_data_offset++];
+#endif
         adc_current_buf[sample] = ADCBuffer[adc_data_offset++];
         adc_knob_buf[sample] = ADCBuffer[adc_data_offset++];
         adc_v_refin_buf[sample] = ADCBuffer[adc_data_offset++];
@@ -68,10 +74,18 @@ void setup(void)
 
 
 void triac_ignition_on() {
+#ifdef REVERSE_TRIAC
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+#else
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+#endif
 }
 void triac_ignition_off() {
+#ifdef REVERSE_TRIAC
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+#else
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+#endif
 }
 
 
