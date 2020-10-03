@@ -1,4 +1,4 @@
-1.2.0 / WIP
+2.0.0 / 2020-10-03
 ------------------
 
 - Added support of STM32F0 family (different kinds of speed optimizations).
