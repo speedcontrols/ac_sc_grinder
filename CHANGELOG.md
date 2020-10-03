@@ -4,6 +4,7 @@
 - Added support of STM32F0 family (different kinds of speed optimizations).
 - Reduced RAM usage significantly.
 - Added HAL-s for new boards.
+- Use short pulses to open triac.
 - Fixed max possible speed.
 - Fixed internal cross-down event timing for symmetry wih cross-up.
 - Renamed build targets.

@@ -224,18 +224,8 @@ private:
         // If period_in_ticks is not yet detected, don't touch triac.
         if (!once_period_counted) return;
 
-        // We keep ignition open continiously after calculated phase shift. Pulse
-        // commutation is not safe because triac current can flow after voltage
-        // is zero. If we pulse at this moment, next period will be lost.
-        //
-        // So, we keep triac open until the end, and pay for it with 10ma load
-        // at 3.3v.
-        //
-        // We should close ignition at the end of half-wave. To be sure - do it
-        // in advance, 4 ticks before.
-
-        if ((triac_open_done && !triac_close_done) &&
-            (phase_counter + TRIAC_ZERO_TAIL_LENGTH >= positive_period_in_ticks))
+        // Remove ignition pulse on next tick. That gives us 50-70uS - enough.
+        if (triac_open_done && !triac_close_done)
         {
             triac_close_done = true;
             hal::triac_ignition_off();
@@ -244,8 +234,20 @@ private:
         // If ignition was not yet activated - check if we can do this
         if (!triac_open_done)
         {
+            // 1) Ignition phase range should be 0-90% for safe operaion.
+            // 2) Sinus "normalization" function is
+            //    https://www.wolframalpha.com/input/?i=graph+%28asin+%28x*2+-+1%29+*+2+%2F+pi+%2B+1%29+%2F+2+for+x+from+0+to+1
+            //
+            // 0.1 of phase => ~ 0.025 of sepoint
+            // => scale down setpoint range [0..1] to [0..0.975]
+
             // "Linearize" setpoint to phase shift & scale to 0..1
-            fix16_t normalized_setpoint = fix16_sinusize(setpoint);
+            fix16_t normalized_setpoint = fix16_sinusize(
+                fix16_mul(
+                    fix16_clamp(setpoint, 0, fix16_one),
+                    F16(1.0 - 0.025)
+                )
+            );
 
             // Calculate ticks treshold when ignition should be enabled:
             // "mirror" and "enlarge" normalized setpoint
