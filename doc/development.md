@@ -43,7 +43,7 @@ For higher power you can:
 - Use 35ma opening triacs (BTA12-600CW), but control it via optocoupler with
   snubber network (as been done at v1 board).
 
-Note, you may need to add (or remove) `-D REVERSE_TRIAC` flag in `platform.ini`,
+Note, you may need add (or remove) `-D REVERSE_TRIAC` flag in `platform.ini`,
 to set proper polarity of triac control signal.
 
 - MCU direct-driven triacs (v2 boards) need reversed polarity.
@@ -60,7 +60,7 @@ Ordinary resistors will fire from time to time. Use this kinds:
 - "High Pulse Withstanding" or "Anti-Surge" (SMD).
 - MELF.
 
-As quick hack (but not recommended) - try several ordinary 5% (not laser rimmed)
+As quick hack (but not recommended) - try several ordinary 5% (not laser trimmed)
 SMD resistors, mounted in vertical column.
 
 Total value should be ~1K (as max as possible). Input cap should be 2.2uF (as
@@ -71,3 +71,16 @@ low as possible).
 
 You can use LNK304 or MP157, but you should update feedback resistors
 (according to chip datasheet) to make output 4.0-4.2 volts.
+
+
+### 100uF capacitor at step-down output
+
+Must be low ESR. Very good choice are [Solid Polymer Electrolytic Capacitor](https://lcsc.com/products/Solid-Polymer-Electrolytic-Capacitor_927.html).
+
+
+### AC-DC inductor
+
+Any 1.0mH-3.3mH 100mA will be fine. Cheap magnetic-resin shielded inductors
+should be good choice.
+
+Electronics average power consumption is ~ 25mA.

@@ -6,7 +6,7 @@ Integrals can be replaced by sums:
 <!--
 
 Use https://github.com/masakiaota/tex_image_link_generator
-to create snippetsfrom LaTeX
+to create snippets from LaTeX
 
 https://tex-image-link-generator.herokuapp.com/
 
@@ -232,3 +232,5 @@ Links below are not mandatory, but can simplify understating of this document.
    Has comparison of triac & chopper regulators, with details about
    harmonic-related losses. Helps to understand, why "active resistance" depends
    on triac control angle.
+3. [Panasonic Application Note 030, Driving Triacs with Phototriacs](https://www.panasonic-electric-works.com/cps/rde/xbcr/pew_eu_en/dd_x615_en_an_030.pdf).
+4. [ST AN440. Triac control with a microcontroller powered from a positive supply](https://www.st.com/resource/en/application_note/cd00003866-triac-control-with-a-microcontroller-powered-from-a-positive-supply-stmicroelectronics.pdf)
