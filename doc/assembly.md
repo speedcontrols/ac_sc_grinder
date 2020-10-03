@@ -15,6 +15,10 @@ Device assembly <!-- omit in toc -->
 
 ## Supported grinders & PCBs
 
+If you wish to customize this project, or join development, see
+[dev notes](development.md).
+
+
 ### Hilda 180W (gray) and similar
 
 - [link1](https://www.aliexpress.com/af/hilda-180w.html?SortType=total_tranpro_desc)
@@ -41,7 +45,7 @@ PCB:
 6 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Only for boars without USB connector. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
 
 Note, if you have soldering air gun, it's good idea to order SMT stencil to
-simplify assembly. Select custom stencil size 100*100mm for cheap delivery.
+simplify assembly. Select custom stencil size 120*120mm for cheap delivery.
 
 **Important!** If you order SMT stencil, add text note to your order: "**make
 stencil according to paste mask file and don't forget corner holes**".
@@ -126,6 +130,7 @@ To run calibration:
 - Wait couple of minutes until magic finishes and motor stops. Be patient.
 
 If everything works as needed, you can go to final step - protect PCB from dust.
+Or see [troubleshooting](troubleshooting.md) if something goes wrong.
 
 
 ## Cover PCB with protective coating
