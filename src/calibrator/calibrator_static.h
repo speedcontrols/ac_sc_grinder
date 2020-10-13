@@ -50,8 +50,21 @@ public:
 
         io.cfg_current_offset = acc_i_sum / acc_counter;
         // Set power treshold 4x of noise value
-        if (acc_p_sum_2e32 < 0) acc_p_sum_2e32 = 0;
-        meter.cfg_min_power_treshold = (acc_p_sum_2e32 >> 16) * 4;
+        {
+            if (acc_p_sum_2e32 < 0) acc_p_sum_2e32 = 0;
+
+            uint64_t p_sum_f16 = acc_p_sum_2e32 >> 16;
+            uint32_t counter_f16 = fix16_from_int(acc_counter);
+
+            // Normalize to 31 bit, to use fix16_div
+            while (p_sum_f16 & 0xFFFFFFFF80000000UL) {
+                p_sum_f16 >>= 1;
+                counter_f16 >>= 1;
+            }
+
+            meter.cfg_min_power_treshold =
+                fix16_div((fix16_t)p_sum_f16, (fix16_t)counter_f16) * 4;
+        }
 
 
         //

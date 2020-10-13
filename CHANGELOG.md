@@ -1,3 +1,9 @@
+2.0.1 / WIP
+------------------
+
+- Fix noise power treshold in calibrator
+
+
 2.0.0 / 2020-10-03
 ------------------
 
