@@ -161,11 +161,8 @@ private:
             if (p_sum_2e32 < 0) p_sum_2e32 = 0;
 
             uint64_t p = p_sum_2e32, i2 = i2_sum_2e32;
-            // Normalize to 31 bit, to use fix16_div
-            while (p & 0xFFFFFFFF80000000UL) {
-                p = p >> 1;
-                i2 = i2 >> 1;
-            }
+
+            NORMALIZE_TO_31_BIT(p, i2);
 
             fix16_t r_ekv = fix16_div((fix16_t)p, (fix16_t)i2) - get_motor_resistance(io.setpoint);
 

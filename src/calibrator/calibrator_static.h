@@ -56,11 +56,7 @@ public:
             uint64_t p_sum_f16 = acc_p_sum_2e32 >> 16;
             uint32_t counter_f16 = fix16_from_int(acc_counter);
 
-            // Normalize to 31 bit, to use fix16_div
-            while (p_sum_f16 & 0xFFFFFFFF80000000UL) {
-                p_sum_f16 >>= 1;
-                counter_f16 >>= 1;
-            }
+            NORMALIZE_TO_31_BIT(p_sum_f16, counter_f16)
 
             meter.cfg_min_power_treshold =
                 fix16_div((fix16_t)p_sum_f16, (fix16_t)counter_f16) * 4;
@@ -132,16 +128,15 @@ public:
                 // Active power is equal to Joule power in this case
                 // Current^2 * R = P
                 // R = P / Current^2
-                if (acc_p_sum_2e32 < 0) acc_p_sum_2e32 = 0;
+                {
+                    if (acc_p_sum_2e32 < 0) acc_p_sum_2e32 = 0;
 
-                uint64_t p = acc_p_sum_2e32, i2 = acc_i2_sum_2e32;
-                // Normalize to 31 bit, to use fix16_div
-                while (p & 0xFFFFFFFF80000000UL) {
-                    p = p >> 1;
-                    i2 = i2 >> 1;
+                    uint64_t p = acc_p_sum_2e32, i2 = acc_i2_sum_2e32;
+
+                    NORMALIZE_TO_31_BIT(p, i2)
+
+                    r_stability_filter.push(fix16_div((fix16_t)p, (fix16_t)i2));
                 }
-
-                r_stability_filter.push(fix16_div((fix16_t)p, (fix16_t)i2));
             }
 
             r_interp_result[r_interp_table_index++] = r_stability_filter.average();
