@@ -51,10 +51,16 @@ to set proper polarity of triac control signal.
   can be routed for reversed control).
 
 
-### AC-DC input resistor(s)
+### AC-DC
+
+The best source for AD-DC tweaks is vendor's application manual. For LNK3204
+that's [AN 70](https://ac-dc.power.com/sites/default/files/product-docs/an70.pdf).
+
+
+#### input resistor(s)
 
 When power on, input capacitor charge cause short, but very high pulse of power.
-Ordinary resistors will fire from time to time. Use this kinds:
+Ordinary resistors will fire from time to time. Use this kinds for robust work:
 
 - Fusible.
 - "High Pulse Withstanding" or "Anti-Surge" (SMD).
@@ -67,20 +73,20 @@ Total value should be ~1K (as max as possible). Input cap should be 2.2uF (as
 low as possible).
 
 
-### LNK3204 replacement
+#### LNK3204 replacement
 
 You can use LNK304 or MP157, but you should update feedback resistors
 (according to chip datasheet) to make output 4.0-4.2 volts.
 
 
-### 100uF capacitor at step-down output
+#### 100uF capacitor at step-down output
 
 Must be low ESR. Very good choice are [Solid Polymer Electrolytic Capacitor](https://lcsc.com/products/Solid-Polymer-Electrolytic-Capacitor_927.html).
 
 
-### AC-DC inductor
-
-Any 1.0mH-3.3mH 100mA will be fine. Cheap magnetic-resin shielded inductors
-should be good choice.
+#### inductor
 
 Electronics average power consumption is ~ 25mA.
+
+Any 1.5mH-3.3mH 100mA inductor will be fine. Cheap magnetic-resin shielded
+inductor should be good choice for low EMI.
