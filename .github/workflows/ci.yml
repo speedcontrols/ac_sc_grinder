@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * 3'
+
+jobs:
+  Linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U platformio
+          platformio update
+
+      - name: Build status check
+        run: |
+          platformio run -e hw_v2_stm32f042f6_usb
+          platformio run -e hw_v2_dev_stm32f072cb_usb
+          platformio run -e hw_v1_stm32f103c8
+
+      - name: Run tests
+        run: platformio test -e test_native
+
+  macOS:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U platformio
+          platformio update
+
+      - name: Build status check
+        run: |
+          platformio run -e hw_v2_stm32f042f6_usb
+          platformio run -e hw_v2_dev_stm32f072cb_usb
+          platformio run -e hw_v1_stm32f103c8
+
+  Windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install -U platformio
+          platformio update
+
+      - name: Build status check
+        run: |
+          platformio run -e hw_v2_stm32f042f6_usb
+          platformio run -e hw_v2_dev_stm32f072cb_usb
+          platformio run -e hw_v1_stm32f103c8
