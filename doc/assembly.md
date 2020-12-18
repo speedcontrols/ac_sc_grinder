@@ -2,6 +2,8 @@ Device assembly <!-- omit in toc -->
 ===============
 
 - [Supported grinders & PCBs](#supported-grinders--pcbs)
+  - [Newacalox (red)](#newacalox-red)
+  - [BDCAT (curved)](#bdcat-curved)
   - [Hilda 180W (gray) and similar](#hilda-180w-gray-and-similar)
 - [Required components](#required-components)
 - [Extract some parts from original board](#extract-some-parts-from-original-board)
@@ -19,18 +21,45 @@ If you wish to customize this project, or join development, see
 [dev notes](development.md).
 
 
+### Newacalox (red)
+
+- [link](https://www.aliexpress.com/item/32847620840.html)
+
+<img src="./images/grinder_newacalox.jpg" width="25%">
+
+Warning! Don't buy aqua grinders with horizontal switch placement. Those are
+very similar, but need different PCB inside
+
+PCB:
+
+- [v4 board](https://easyeda.com/speed/ac-speed-control-v4)
+
+
+### BDCAT (curved)
+
+- [link](https://www.aliexpress.com/item/33060990933.html)
+
+<img src="./images/grinder_bdcat.jpg" width="25%">
+
+PCB:
+
+- [v4 board](https://easyeda.com/speed/ac-speed-control-v4)
+
+
 ### Hilda 180W (gray) and similar
+
+Warning! Those grinders are out of market and not recommended for use.
 
 - [link1](https://www.aliexpress.com/af/hilda-180w.html?SortType=total_tranpro_desc)
 - [link2](https://www.banggood.com/40Pcs-180W-230V-Electric-Hand-Drill-Rotary-Tool-Mini-Electric-Grinder-Cutting-Polishing-Tools-p-1291185.html)
 
-<img src="./images/hilda_assembled.jpg" width="25%">
+<img src="./images/grinder_hilda.jpg" width="25%">
 
 PCB:
 
-- [v1 board](https://easyeda.com/speed/AC-speed-control-for-grinder) (recommended).
-- [v2 development board](https://easyeda.com/speed/ac-speed-control-v2-dev). Has
-  additional interfaces. Used by developers to prototype new features.
+- [v1 board](https://easyeda.com/speed/AC-speed-control-for-grinder)
+- [v2 development board](https://easyeda.com/speed/ac-speed-control-v2-dev) (has
+  additional interfaces, used by developers to prototype new features)
 
 
 ## Required components
@@ -40,12 +69,12 @@ PCB:
 1 | Grinder mini drill | See links above.
 2 | PCB & Components | See links above, acording to your model. If you order PCB first, components second, you will be able to join delivery and save some bucks.
 3 | PCB protective coating | [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer).
-4 | [Male](https://www.aliexpress.com/item/-/32700932502.html) & [female](https://www.aliexpress.com/item/-/32593170276.html) 2.8x0.5mm power terminals | Optional. You can solder power wires directly.
-5 | [22 AWG wire](https://www.aliexpress.com/item/32854919883.html) | Stainless steel, for SMT stencil only. Position over PCB, via reference holes.
-6 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Only for boars without USB connector. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
+4 | [Male](https://www.aliexpress.com/item/32823098492.html) & [female](https://www.aliexpress.com/item/32978811645.html) 2.8x0.5mm power terminals | Optional. You can solder power wires directly.
+5 | [22 AWG wire](https://www.aliexpress.com/item/1005002194439398.html) | Stainless steel / Nichrome / ... (any not too soft), for SMT stencil only. Position paste mask over PCB, via reference holes.
+6 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Only for boards without USB connector. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
 
 Note, if you have soldering air gun, it's good idea to order SMT stencil to
-simplify assembly. Select custom stencil size 120*120mm for cheap delivery.
+simplify assembly. Select custom stencil, size 70*50mm & bottom layer only.
 
 **Important!** If you order SMT stencil, add text note to your order: "**make
 stencil according to paste mask file and don't forget corner holes**".
@@ -53,13 +82,16 @@ stencil according to paste mask file and don't forget corner holes**".
 
 ## Extract some parts from original board
 
+Prior to disassemble, turn grinder on for 5 minutes to run-in brushes. That
+will make following calibration more stable.
+
 You need:
 
 - Potentiometer.
-- Motor terminals.
-- Filter capacitor (optional, if attached in parallel to power).
+- Motor terminals (optional).
+- Tiac (optional, if Z0409).
 
-<img src="./images/old_pcb_components.jpg" width="60%" alt="Reused components from original board">
+<img src="./images/old_pcb_components_newacalox.jpg" width="30%" alt="Reused components from original Newacalox board"> <img src="./images/old_pcb_components_bdcat.jpg" width="30%" alt="Reused components from original BDCAT board">
 
 
 ## Solder PCB top and bottom
@@ -67,33 +99,34 @@ You need:
 We recommend to install all components, except regulating knob. Because on
 flux cleanup phase, some solvents can wash off speed marks.
 
-PCB top:
+PCB bottom (Newacalox & BDCAT):
 
-<img src="./images/pcb_top.jpg" width="60%" alt="PCB top side">
+<img src="./images/pcb_v4_newacalox_bottom.jpg" width="30%" alt="PCB bottom side (Newacalox)"> <img src="./images/pcb_v4_bdcat_bottom.jpg" width="30%" alt="PCB bottom side (BDCAT)">
 
-PCB bottom:
 
-<img src="./images/pcb_bottom.jpg" width="60%" alt="PCB bottom side">
+PCB top (Newacalox & BDCAT):
+
+<img src="./images/pcb_v4_newacalox_top.jpg" width="30%" alt="PCB top side (Newacalox)"> <img src="./images/pcb_v4_bdcat_top.jpg" width="30%" alt="PCB top side (BDCAT)">
 
 
 ## Cleanup PCB
 
-You should remove the rest of flux, to add protective coating later. Methods and
-solvents are not commented. We hope, if you use flux, you know how to remove it.
+You should remove the rest of flux, to add protective coating later. We recommend
+use ultrasonic bath (small ones are cheap).
 
 
 ## Install the rest and attach wires
 
-Now you can install potentiometer, filtering capacitor, and check everything
-fits into case. Don't forget to remove flux again.
+Now you can install potentiometer, and check everything fits into case.
+Don't forget to remove flux again.
 
-PCB with speed knob & filter capacitor:
+PCB with speed knob:
 
-<img src="./images/pcb_full.jpg" width="60%" alt="PCB with all component">
+<img src="./images/pcb_v4_newacalox_full.jpg" width="30%" alt="PCB with all components (Newacalox)"> <img src="./images/pcb_v4_bdcat_full.jpg" width="30%" alt="PCB with all components (BDCAT)">
 
 PCB in drill body:
 
-<img src="./images/pcb_and_case.jpg" width="60%" alt="PCB in case">
+<img src="./images/pcv_v4_in_case_newacalox.jpg" width="30%" alt="PCB in case"> <img src="./images/pcv_v4_in_case_bdcat.jpg" width="30%" alt="PCB in case">
 
 
 ## Upload firmware and test
@@ -155,7 +188,7 @@ can be spray like [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CR
 acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer),
 or something else.
 
-<img src="./images/protective_coat.jpg" width="60%" alt="Protective coat in spray and liquid form">
+<img src="./images/protective_coat.jpg" width="30%" alt="Protective coat in spray and liquid form">
 
 If your coater is spray - put it to pepsi cap first and use cosmetic brush to
 cover PCB. Don't apply spray directly, because you need to keep terminals and
@@ -201,8 +234,6 @@ After testing adhesion of different samples, those look nice:
 - [UR SUGAR Top Coat](https://www.aliexpress.com/item/32948364351.html) - may
   be more viscous than desired for comfortable work.
 
-Make sure to clean PCB with IPA prior to apply gel.
-
 Disadvantage: average adhesion, not tested in long term (months and years).
 
 
@@ -210,13 +241,9 @@ Disadvantage: average adhesion, not tested in long term (months and years).
 
 By default, auto-tune tries to do the best, and you should not need manual
 modifications. But, there are some rare cases, when you may wish to change
-defaults:
+defaults.
 
-1. If grinder "oscillates" in some modes - reduce [`PID_SAFETY_SCALE`](https://github.com/speedcontrols/ac_sc_grinder/blob/24eba36e3c3c48c03d976829382f7f6ada63cc11/src/calibrator/calibrator_pid.h#L15)
-   to `0.5`.
-2. If you wish to enable back integral component of regulator - comment out
-   [`-DNO_PID_I`](https://github.com/speedcontrols/ac_sc_grinder/blob/24eba36e3c3c48c03d976829382f7f6ada63cc11/platformio.ini#L21)
-   line in config.
+If grinder "oscillates" in some modes - reduce [`ADRC_SAFETY_SCALE`](https://github.com/speedcontrols/ac_sc_grinder/blob/master/src/calibrator/calibrator_adrc.h#L25) to `0.5`. Value should be as max as possible.
 
 
 ## The end :) <!-- omit in toc -->
