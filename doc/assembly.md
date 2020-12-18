@@ -2,6 +2,7 @@ Device assembly <!-- omit in toc -->
 ===============
 
 - [Supported grinders & PCBs](#supported-grinders--pcbs)
+  - [Newacalox (red)](#newacalox-red)
   - [Hilda 180W (gray) and similar](#hilda-180w-gray-and-similar)
 - [Required components](#required-components)
 - [Extract some parts from original board](#extract-some-parts-from-original-board)
@@ -19,12 +20,28 @@ If you wish to customize this project, or join development, see
 [dev notes](development.md).
 
 
+### Newacalox (red)
+
+- [link](https://www.aliexpress.com/item/32847620840.html)
+
+<img src="./images/grinder_newacalox.jpg" width="25%">
+
+Warning! Don't buy aqua grinders with horizontal switch placement. Those are
+very similar, but need different PCB inside
+
+PCB:
+
+- [v2 board](https://easyeda.com/speed/AC-speed-control-for-grinder)
+
+
 ### Hilda 180W (gray) and similar
+
+Warning! Those grinders are out of market and not recommended for build.
 
 - [link1](https://www.aliexpress.com/af/hilda-180w.html?SortType=total_tranpro_desc)
 - [link2](https://www.banggood.com/40Pcs-180W-230V-Electric-Hand-Drill-Rotary-Tool-Mini-Electric-Grinder-Cutting-Polishing-Tools-p-1291185.html)
 
-<img src="./images/hilda_assembled.jpg" width="25%">
+<img src="./images/grinder_hilda.jpg" width="25%">
 
 PCB:
 
@@ -42,7 +59,7 @@ PCB:
 3 | PCB protective coating | [Plastik 70 CRC](https://www.google.com/search?q=Plastik+70+CRC) or any other acrylic [insulating lacquer](https://www.google.com/search?q=insulating+lacquer).
 4 | [Male](https://www.aliexpress.com/item/-/32700932502.html) & [female](https://www.aliexpress.com/item/-/32593170276.html) 2.8x0.5mm power terminals | Optional. You can solder power wires directly.
 5 | [22 AWG wire](https://www.aliexpress.com/item/32854919883.html) | Stainless steel, for SMT stencil only. Position over PCB, via reference holes.
-6 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Only for boars without USB connector. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
+6 | [Cheap ST-link/V2 programmer](https://www.aliexpress.com/af/st-link-v2.html?SortType=total_tranpro_desc) | Only for boards without USB connector. You can also order it at [LCSC](https://lcsc.com/search?q=st-link) with other components.
 
 Note, if you have soldering air gun, it's good idea to order SMT stencil to
 simplify assembly. Select custom stencil size 120*120mm for cheap delivery.
@@ -53,11 +70,14 @@ stencil according to paste mask file and don't forget corner holes**".
 
 ## Extract some parts from original board
 
+Prior to disassemble, turn grinder on for 5 minutes to run-in brushes. That
+will make following calibration more stable.
+
 You need:
 
 - Potentiometer.
 - Motor terminals.
-- Filter capacitor (optional, if attached in parallel to power).
+- Tiac (optional, if Z0409, cheap alternative to ACST410).
 
 <img src="./images/old_pcb_components.jpg" width="60%" alt="Reused components from original board">
 
@@ -67,13 +87,13 @@ You need:
 We recommend to install all components, except regulating knob. Because on
 flux cleanup phase, some solvents can wash off speed marks.
 
-PCB top:
-
-<img src="./images/pcb_top.jpg" width="60%" alt="PCB top side">
-
 PCB bottom:
 
 <img src="./images/pcb_bottom.jpg" width="60%" alt="PCB bottom side">
+
+PCB top:
+
+<img src="./images/pcb_top.jpg" width="60%" alt="PCB top side">
 
 
 ## Cleanup PCB
