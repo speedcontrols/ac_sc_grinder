@@ -25,8 +25,9 @@ public:
     // Config info
     fix16_t cfg_rekv_to_speed_factor;
 
-    // Calibration params. Non needed on real work
-    fix16_t cfg_min_power_treshold = 0;
+    // Noise calibration tresholds
+    int64_t cfg_min_p_sum_2e64 = 0;
+    int64_t cfg_min_i2_sum_2e64 = 0;
 
     // Input from triac driver to reflect triac setpoint. Needed for speed measure
     // to interpolate motor resistance. Autoupdated by triac driver.
@@ -70,7 +71,7 @@ public:
         }
 
         // Pre-calclate inverted coeff-s to avoid divisions
-        // in `get_motor_resistance()` 
+        // in `get_motor_resistance()`
         cfg_r_table_setpoints_inerp_inv[0] = fix16_one;
         for (int i = 1; i < CFG_R_INTERP_TABLE_LENGTH; i++)
         {
@@ -93,8 +94,8 @@ public:
     {
         speed = 0;
 
-        p_sum_2e32 = 0;
-        i2_sum_2e32 = 0;
+        p_sum_2e64 = 0;
+        i2_sum_2e64 = 0;
         sum_counter = 0;
 
         io.out.clear();
@@ -130,8 +131,8 @@ private:
         return cfg_r_table[0];
     }
 
-    int64_t p_sum_2e32 = 0;  // active power << 32
-    uint64_t i2_sum_2e32 = 0; // square of current << 32
+    int64_t p_sum_2e64 = 0;  // active power << 32
+    int64_t i2_sum_2e64 = 0; // square of current << 32
     uint16_t sum_counter = 0;
 
 
@@ -146,8 +147,8 @@ private:
 
         // Calculate sums
         // use 64 bits to prevent overflow (but sill keep dsired precision)
-        p_sum_2e32 += (int64_t)io_data.voltage * io_data.current;
-        i2_sum_2e32 += (uint64_t)io_data.current * io_data.current;
+        p_sum_2e64 += (int64_t)io_data.voltage * io_data.current;
+        i2_sum_2e64 += (uint64_t)io_data.current * io_data.current;
         sum_counter++;
 
         // Calculate speed at end of negative half-wave
@@ -158,24 +159,27 @@ private:
         // r_ekv = R - R_motor
         if (io_data.zero_cross_up)
         {
-            if (p_sum_2e32 < 0) p_sum_2e32 = 0;
+            // 1. Filter noise.
+            // 2. Avoid zero division.
+            if (p_sum_2e64 > cfg_min_p_sum_2e64 && i2_sum_2e64 > cfg_min_i2_sum_2e64)
+            {
+                uint64_t p = p_sum_2e64, i2 = i2_sum_2e64;
 
-            uint64_t p = p_sum_2e32, i2 = i2_sum_2e32;
+                NORMALIZE_TO_31_BIT(p, i2);
 
-            NORMALIZE_TO_31_BIT(p, i2);
+                if (i2 > 0) {
+                    fix16_t r_ekv = fix16_div((fix16_t)p, (fix16_t)i2) - get_motor_resistance(io.setpoint);
+                    speed = fix16_div(r_ekv, cfg_rekv_to_speed_factor);
+                }
+                else speed = 0;
 
-            fix16_t r_ekv = fix16_div((fix16_t)p, (fix16_t)i2) - get_motor_resistance(io.setpoint);
+                // Clamp calculated speed value, speed can't be negative
+                if (speed < 0) speed = 0;
+            }
+            else speed = 0;
 
-            speed = fix16_div(r_ekv, cfg_rekv_to_speed_factor);
-
-            // Attempt to drop noise on calibration phase
-            if ((p_sum_2e32 >> 16) < ((int64_t)cfg_min_power_treshold * sum_counter)) speed = 0;
-
-            // Clamp calculated speed value, speed can't be negative
-            if (speed < 0) speed = 0;
-
-            p_sum_2e32 = 0;
-            i2_sum_2e32 = 0;
+            p_sum_2e64 = 0;
+            i2_sum_2e64 = 0;
             sum_counter = 0;
         }
     }
