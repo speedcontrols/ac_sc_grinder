@@ -31,39 +31,6 @@ public:
         YIELD_UNTIL(io_data.zero_cross_up, false);
 
         //
-        // Calculate thresholds for current and power
-        // to drop noise in speed sensor
-        //
-
-        acc_counter = 0;
-        acc_p_sum_2e32 = 0;
-        acc_i_sum = 0;
-
-        while (!io_data.zero_cross_down) {
-            YIELD(false);
-
-            acc_p_sum_2e32 += (int64_t)(io_data.voltage) * io_data.current;
-            acc_i_sum += io_data.current;
-            acc_counter++;
-        }
-
-
-        io.cfg_current_offset = acc_i_sum / acc_counter;
-        // Set power treshold 4x of noise value
-        {
-            if (acc_p_sum_2e32 < 0) acc_p_sum_2e32 = 0;
-
-            uint64_t p_sum_f16 = acc_p_sum_2e32 >> 16;
-            uint32_t counter_f16 = fix16_from_int(acc_counter);
-
-            NORMALIZE_TO_31_BIT(p_sum_f16, counter_f16)
-
-            meter.cfg_min_power_treshold =
-                fix16_div((fix16_t)p_sum_f16, (fix16_t)counter_f16) * 4;
-        }
-
-
-        //
         // Measure checkpoints
         //
 
@@ -104,7 +71,7 @@ public:
                     // Don't continue with triac on negative wave, measure only.
                     if (io_data.zero_cross_down) io.setpoint = 0;
 
-                    
+
                     acc_p_sum_2e32 += (int64_t)io_data.voltage * io_data.current;
                     acc_i2_sum_2e32 += (uint64_t)io_data.current * io_data.current;
                     acc_counter++;
@@ -173,7 +140,6 @@ private:
     uint16_t acc_counter = 0;
 
     int64_t acc_p_sum_2e32 = 0;
-    uint32_t acc_i_sum = 0;
     uint64_t acc_i2_sum_2e32 = 0;
 
     // Holds current index in R interpolation table

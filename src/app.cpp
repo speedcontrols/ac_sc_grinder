@@ -9,6 +9,8 @@
 #include "io.h"
 #include "regulator.h"
 #include "calibrator/calibrator.h"
+#include "calibrator/calibrator_noise.h"
+
 
 // Note: update version tag to reset old data
 EepromEmu<EepromFlashDriver, 0x0001> eeprom;
@@ -17,6 +19,7 @@ Io io;
 Meter meter;
 Regulator regulator;
 Calibrator calibrator;
+CalibratorNoise calibrator_noise;
 
 
 float eeprom_float_read(uint32_t addr, float dflt) {
@@ -38,6 +41,15 @@ int main()
     meter.configure();
 
     hal::start();
+
+    while (1) {
+        while (io.out.empty()) {}
+
+        io_data_t io_data;
+        io.out.pop(io_data);
+
+        if (calibrator_noise.tick(io_data)) break;
+    }
 
     // Override loop in main.c to reduce patching
     while (1) {
