@@ -7,13 +7,13 @@
 
 #include "meter.h"
 #include "io.h"
-#include "regulator.h"
+
 #include "calibrator/calibrator.h"
 #include "calibrator/calibrator_noise.h"
 
 
 // Note: update version tag to reset old data
-EepromEmu<EepromFlashDriver, 0x0001> eeprom;
+EepromEmu<EepromFlashDriver, 0x0002> eeprom;
 
 Io io;
 Meter meter;

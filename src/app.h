@@ -14,7 +14,11 @@ extern Io io;
 
 extern Meter meter;
 
-#include "regulator.h"
+#ifdef ADRC
+    #include "regulator_adrc.h"
+#else
+    #include "regulator.h"
+#endif
 
 extern Regulator regulator;
 
