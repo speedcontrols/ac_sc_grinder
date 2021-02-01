@@ -11,7 +11,12 @@
 #include "calibrator_wait_knob_dial.h"
 #include "calibrator_static.h"
 #include "calibrator_speed.h"
-#include "calibrator_pid.h"
+
+#ifdef ADRC
+    #include "calibrator_adrc.h"
+#else
+    #include "calibrator_pid.h"
+#endif
 
 
 class Calibrator
@@ -29,9 +34,12 @@ public:
 
         YIELD_UNTIL(wait_knob_dial.tick(io_data), false);
         YIELD_UNTIL(calibrate_static.tick(io_data), true);
+#ifdef ADRC
+        YIELD_UNTIL(calibrate_adrc.tick(io_data), true);
+#else
         YIELD_UNTIL(calibrate_speed.tick(io_data), true);
         YIELD_UNTIL(calibrate_pid.tick(io_data), true);
-
+#endif
         return false;
     }
 
@@ -40,7 +48,11 @@ private:
     CalibratorWaitKnobDial wait_knob_dial;
     CalibratorStatic calibrate_static;
     CalibratorSpeed calibrate_speed;
+#ifdef ADRC
+    CalibratorADRC calibrate_adrc;
+#else
     CalibratorPID calibrate_pid;
+#endif  
 };
 
 #endif
