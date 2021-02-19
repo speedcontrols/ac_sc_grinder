@@ -24,21 +24,21 @@
 #define ADRC_P_CORR_COEFF_SAFETY_SCALE 0.6
 
 // Setpoint values for picking ADRC regulator parameters
-#define ADRC_KP_SETPOINT 0.5
-#define ADRC_OBSERVERS_SETPOINT 0.5
-#define ADRC_OBSERVERS_START_SETPOINT 0.35
-#define ADRC_P_CORR_COEFF_SETPOINT 0.5
+#define ADRC_KP_SETPOINT 0.3
+#define ADRC_OBSERVERS_SETPOINT 0.35
+#define ADRC_OBSERVERS_START_SETPOINT 0.25
+#define ADRC_P_CORR_COEFF_SETPOINT 0.3
 #define SPEED_FACTOR_SETPOINT 0.8
 
 // Maximum speed oscillation amplitude
 // and speed overshoot values
 // for ADRC_KP and ADRC_KOBSERVERS adjustment
-#define MAX_AMPLITUDE 3.0
+#define MAX_AMPLITUDE 1.2
 // Maximum speed oscillation amplitude
 // and speed overshoot values
 // for ADRC_P_CORR_COEFF adjustment
-#define MAX_P_CORR_COEFF_AMPLITUDE 3.0
-#define MAX_OVERSHOOT 0.15
+#define MAX_P_CORR_COEFF_AMPLITUDE 1.2
+#define MAX_OVERSHOOT 0.1
 
 // Setpoint values for start and
 // stop time measurement.
