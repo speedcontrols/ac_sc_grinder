@@ -23,14 +23,6 @@
 #define CFG_RPM_MAX_LIMIT_ADDR 4
 #define CFG_RPM_MAX_LIMIT_DEFAULT 30000.0f
 
-// Proportional term of PID controller (auto-calibrated).
-#define CFG_PID_P_ADDR 5
-#define CFG_PID_P_DEFAULT 1.3f
-
-// Integral term of PID controller (auto-calibrated).
-#define CFG_PID_I_ADDR 6
-#define CFG_PID_I_DEFAULT 3.0f
-
 // Knob initial zone where motor should not run (% of max range).
 #define CFG_DEAD_ZONE_WIDTH_ADDR 7
 #define CFG_DEAD_ZONE_WIDTH_DEFAULT 2.0f
