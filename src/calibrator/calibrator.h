@@ -10,7 +10,6 @@
 #include "../app.h"
 #include "calibrator_wait_knob_dial.h"
 #include "calibrator_static.h"
-#include "calibrator_speed.h"
 #include "calibrator_adrc.h"
 
 
@@ -38,7 +37,6 @@ private:
     // Nested FSM-s
     CalibratorWaitKnobDial wait_knob_dial;
     CalibratorStatic calibrate_static;
-    CalibratorSpeed calibrate_speed;
     CalibratorADRC calibrate_adrc;
 };
 

@@ -13,7 +13,7 @@
 
 
 // Note: update version tag to reset old data
-EepromEmu<EepromFlashDriver, 0x0002> eeprom;
+EepromEmu<EepromFlashDriver, 0x0003> eeprom;
 
 Io io;
 Meter meter;
