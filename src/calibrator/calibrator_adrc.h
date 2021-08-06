@@ -10,8 +10,10 @@
 
 // Minimal reasonable adrc_Kp * b0 value
 #define MIN_ADRC_KPdivB0 0.3
-// Minimal reasonable adrc_Kobservers value
-#define MIN_ADRC_KOBSERVERS 1.0
+// Minimal adrc_Kobservers value (observers disabled)
+#define MIN_ADRC_KOBSERVERS 0.0
+// Safe adrc_Kobservers value for adrc_Kp calibration
+#define SAFE_ADRC_KOBSERVERS 1.0
 // Minimal adrc_p_corr_coeff is 0 (proportional correction disabled)
 #define MIN_ADRC_P_CORR_COEFF 0.0
 
@@ -23,11 +25,7 @@
 #define ADRC_SAFETY_SCALE 0.6
 #define ADRC_P_CORR_COEFF_SAFETY_SCALE 0.6
 
-// Setpoint values for picking ADRC regulator parameters
-#define ADRC_KP_SETPOINT 0.5
-#define ADRC_OBSERVERS_SETPOINT 0.5
-#define ADRC_OBSERVERS_START_SETPOINT 0.35
-#define ADRC_P_CORR_COEFF_SETPOINT 0.5
+// Maximal setpoint for picking motor speed factor
 #define SPEED_FACTOR_SETPOINT 0.8
 
 // Maximum speed oscillation amplitude
@@ -212,6 +210,24 @@ public:
         meter.configure();
 
         //
+        // Calculate speed setting values for picking ADRC regulator parameters
+        //
+
+        fix16_t cfg_rpm_max_limit = fix16_from_float(
+          eeprom_float_read(CFG_RPM_MAX_LIMIT_ADDR, CFG_RPM_MAX_LIMIT_DEFAULT)
+        );
+
+        fix16_t cfg_rpm_min_limit = fix16_from_float(
+          eeprom_float_read(CFG_RPM_MIN_LIMIT_ADDR, CFG_RPM_MIN_LIMIT_DEFAULT)
+        );
+
+        fix16_t rpm_min_rel = fix16_div(cfg_rpm_min_limit, cfg_rpm_max_limit);
+
+        adrc_kp_speed_setting = rpm_min_rel;
+        adrc_observers_speed_setting = rpm_min_rel;
+        adrc_p_corr_coeff_speed_setting = rpm_min_rel;
+
+        //
         // Pick ADRC_KP coeff value by half cut method
         //
 
@@ -228,22 +244,22 @@ public:
         iteration_step = fix16_div(F16(INIT_KP_ITERATION_STEP),
                                    regulator.adrc_b0_inv);
 
-        // Set ADRC_KOBSERVERS to min reasonable value
-        regulator.cfg_adrc_Kobservers = F16(MIN_ADRC_KOBSERVERS);
+        // Set ADRC_KOBSERVERS to safe value
+        regulator.cfg_adrc_Kobservers = F16(SAFE_ADRC_KOBSERVERS);
 
         while (iterations_count < max_iterations)
         {
             speed_tracker.reset();
 
             // Wait for stable speed with minimal
-            // ADRC_KP and minimal ADRC_KOBSERVERS
+            // ADRC_KP and safe ADRC_KOBSERVERS
             regulator.cfg_adrc_Kp = fix16_div(F16(MIN_ADRC_KPdivB0),
                                               regulator.adrc_b0_inv);
             regulator.adrc_update_observers_parameters();
 
             while (!speed_tracker.is_stable_or_exceeded())
             {
-                regulator.tick(F16(ADRC_KP_SETPOINT), meter.speed);
+                regulator.tick(adrc_kp_speed_setting, meter.speed);
                 io.setpoint = regulator.out_power;
 
                 YIELD(false);
@@ -267,7 +283,7 @@ public:
 
             while (measure_amplitude_ticks < measure_amplitude_ticks_max)
             {
-                regulator.tick(F16(ADRC_KP_SETPOINT), meter.speed);
+                regulator.tick(adrc_kp_speed_setting, meter.speed);
                 io.setpoint = regulator.out_power;
 
                 YIELD(false);
@@ -325,7 +341,7 @@ public:
 
         iterations_count = 0;
         adrc_param_attempt_value = F16(MIN_ADRC_KOBSERVERS);
-
+        
         // TODO - Measure period duration for correct operation at 50 and 60 Hz
         measure_amplitude_ticks_max = fix16_to_int(motor_start_stop_time * 50);
 
@@ -345,7 +361,7 @@ public:
 
             while (!speed_tracker.is_stable_or_exceeded())
             {
-                regulator.tick(F16(ADRC_OBSERVERS_SETPOINT), meter.speed);
+                regulator.tick(adrc_observers_speed_setting, meter.speed);
                 io.setpoint = regulator.out_power;
 
                 YIELD(false);
@@ -369,7 +385,7 @@ public:
 
             while (measure_amplitude_ticks < measure_amplitude_ticks_max)
             {
-                regulator.tick(F16(ADRC_OBSERVERS_SETPOINT), meter.speed);
+                regulator.tick(adrc_observers_speed_setting, meter.speed);
                 io.setpoint = regulator.out_power;
 
                 YIELD(false);
@@ -449,7 +465,7 @@ public:
 
             while (!speed_tracker.is_stable_or_exceeded())
             {
-                regulator.tick(F16(ADRC_P_CORR_COEFF_SETPOINT), meter.speed);
+                regulator.tick(adrc_p_corr_coeff_speed_setting, meter.speed);
                 io.setpoint = regulator.out_power;
 
                 YIELD(false);
@@ -472,7 +488,7 @@ public:
 
             while (measure_amplitude_ticks < measure_amplitude_ticks_max)
             {
-                regulator.tick(F16(ADRC_P_CORR_COEFF_SETPOINT), meter.speed);
+                regulator.tick(adrc_p_corr_coeff_speed_setting, meter.speed);
                 io.setpoint = regulator.out_power;
 
                 YIELD(false);
@@ -565,6 +581,11 @@ private:
     enum {
         speed_data_length = (int)(SPEED_DATA_SAVE_TIME_MAX * 60 / SPEED_DATA_SAVE_RATIO)
     };
+
+    // Speed settings for picking ADRC regulator parameters
+    fix16_t adrc_kp_speed_setting;
+    fix16_t adrc_observers_speed_setting;
+    fix16_t adrc_p_corr_coeff_speed_setting;
 
     // Buffers for speed data for start/stop
     // time measurement
