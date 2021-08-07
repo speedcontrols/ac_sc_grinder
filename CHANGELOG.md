@@ -1,3 +1,12 @@
+3.0.0 / WIP
+------------------
+
+- Support all new boards.
+- Replace PID with ADRC.
+- Improved calibration.
+- Improved noise filter & avoid zero division at start.
+
+
 2.0.1 / 2020-10-14
 ------------------
 
@@ -14,7 +23,7 @@
 - Fixed max possible speed.
 - Fixed internal cross-down event timing for symmetry wih cross-up.
 - Renamed build targets.
-- Code refactoring & cleanup. 
+- Code refactoring & cleanup.
 
 
 1.1.1 / 2020-06-13
