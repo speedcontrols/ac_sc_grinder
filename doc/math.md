@@ -112,73 +112,75 @@ Signal may be noisy at short pulses. To filter accidental peaks, measure
 multiple times, until 3 consecutive results become stable.
 
 
-### Motor's RPM/volts response linearization & scaling.
+### ADRC-control and calibration
 
-Motor's speed depends on volts in non linear way. That may cause problems for
-PID control. Been tuned on low speed, PID will not be optimal at opposite side.
-Motor speed can be measured on different voltages for next corrections. That's
-not ideal but good enough.
+Grinder motors are very inconvenient for PID-based systems:
 
-Note, we have 2 transforms for triac phase in the end:
+- RPM/Volts response is non linear, and varies significantly between different
+  grinder models. The same about zero speed offset.
+- Cooling fan adds extra distortion.
 
-1. DC volts (0..max) to AC phase of sine wave.
-2. Motor non-linearity compensation.
+So, we use ADRC instead of PID. Adaptive character of the ADRC system makes it
+possible to use without the RPM/Volts response linearization. Deviations from
+the linear RPM/Volts response are eliminated by the generalized disturbance
+observer (they are part of the generalized disturbance).
 
-It would be nice to scan speed in all voltage range and build inverse
-compensation function.
+First-order ADRC system consists of linear proportional controller with `Kp` gain
+and 2 state observers - speed observer, generalized disturbance observer.
+Observers are integrators with `Kobservers` gain and `L1`, `L2` time constants.
+Output of the linear proportional controller is corrected by generalized
+disturbance signal. This correction eliminates (in the steady state) the motor
+speed deviation caused by mechanical motor load, motor parameters deviation,
+inaccurate motor parameters estimation.
 
-See `rpms_vs_volts_idling.ods` with scan results from real tacho (red) and our
-"speed sensor" (blue). There are 2 problems:
+ADRC system parameters and equations:
 
-1. Bad noise at low volts. Seems, can not be dismissed with this motor type.
-2. Unexpected fall in middle range. No ideas about nature of this effect.
+`b0` = `K / T`, where `K=1` due to speed and triac setpoint normalization,
+`T` - desired optimal motor time constant.
 
-Bad news is, we should compensate both deviations. Now we do this via "magical
-constants", selecting ranges with plausible data. But this was not tested with
-other motors and should be improved somehow.
+`L1` - time constant of the speed observer.
 
-Current algorithm is:
+![L_1 =  2 \cdot  K_p \cdot K_{observers}](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+L_1+%3D++2+%5Ccdot++K_p+%5Ccdot+K_%7Bobservers%7D)
 
-- Scan RPMs with small step in low range, and search interval [0.2..0.4]
-  at Y axis. Build extrapolation (line) for low range. Use 2 points for linear
-  interpolation.
-- Scan 3 points at high range, use for linear interpolation.
-- Connect the gap between via spline and use 2 points for linear interpolation
-  (that's enough).
+`L2` - time constant of the generalized disturbance observer.
 
-So, we have 7 points to interpolate RPMs good enough. See
-`rpms_approximated.ods`. Finally, those can be used to build inverse data.
+![L_2 =  (K_p \cdot K_{observers})^2](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+L_2+%3D++%28K_p+%5Ccdot+K_%7Bobservers%7D%29%5E2)
 
-Note about scaling factor. That depends on constructional coefficient K of motor.
-In real world everything is very simple. "Speed sensor" should produce data in
-desired range. In our case, that's [0..1]. For our 180W grinder, scaling factor
-is ~ 400-500. For any other motors it should fit in [300..2000] range.
+`u0` - output of linear proportional controller in ADRC system.
 
-**Implementation notes**
+![u_0 = (Knob_{normalized} - Speed_{estimated}) \cdot K_p
+](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+u_0+%3D+%28Knob_%7Bnormalized%7D+-+Speed_%7Bestimated%7D%29+%5Ccdot+K_p%0A)
 
-How to detect that speed become stable:
+Speed observer equation:
 
-- Collect data ~ 0.25 secs & apply median filter.
-- Try 3 times and make sure difference is < 0.3% (1% is not enough).
-- Limit total number of measurements to 3 secs (if jitter is too big and
-  stability condition not satisfied)
+![Speed_{estimated} = \int (u_0 + L_1 \cdot (Speed - Speed_{estimated})) \cdot dt
+](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+Speed_%7Bestimated%7D+%3D+%5Cint+%28u_0+%2B+L_1+%5Ccdot+%28Speed+-+Speed_%7Bestimated%7D%29%29+%5Ccdot+dt%0A)
 
+Generalized disturbance observer equation:
 
-### PI-control calibration
+![ADRC_{correction} =  \int (Speed - Speed_{estimated}) \cdot L_2 \cdot dt
+](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+ADRC_%7Bcorrection%7D+%3D++%5Cint+%28Speed+-+Speed_%7Bestimated%7D%29+%5Ccdot+L_2+%5Ccdot+dt%0A)
 
-Since our system has "fast" response, it's enough to use direct iterative
-method to find `P` and `I` coefficients. Implementation is simple & takes acceptable
-time to run.
+`P_correction` - proportional correction signal, makes reaction to motor load change significantly faster.
 
-General steps are:
+![P_{correction} = (Speed - Speed_{estimated}) \cdot P_{corrcoeff}
+](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+P_%7Bcorrection%7D+%3D+%28Speed+-+Speed_%7Bestimated%7D%29+%5Ccdot+P_%7Bcorrcoeff%7D%0A)
 
-1. Measure motor start/stop time. Then use it for 2 things:
-   - Understand max possible `I`.
-   - Understand max possible oscillations period.
-2. Find `P` in range [1..5] by halving (division by 2) method. Criteria -
-   "no oscillations" (speed dispersion should not exceed normal noise)
-3. Find `I` in range [0..max] by halving method. Criteria - no over-compensation.
+Output signal of ADRC regulator:
 
+![Output = (u_0 - ADRC_{correction} - P_{correction}) / b_0
+](https://render.githubusercontent.com/render/math?math=%5Cdisplaystyle+Output+%3D+%28u_0+-+ADRC_%7Bcorrection%7D+-+P_%7Bcorrection%7D%29+%2F+b_0%0A)
+
+General steps of ADRC calibration are:
+
+1. Measure motor start/stop time. Then use it for understand max possible
+   oscillations period.
+2. Find `Kp` in range [0.3\*b0..0.3\*b0+4] by halving (division by 2) method.
+   Criteria - "no oscillations" (speed dispersion should not exceed normal noise).
+3. Find `Kobservers` in range [0..max] by halving method. Criteria -
+   "no oscillations".
+4. Find `P_corrcoeff` in range [0..max] by halving method. Criteria -
+   "no oscillations".
 
 **Implementation notes**
 
@@ -190,29 +192,42 @@ Basic start/stop time measure:
   setpoint". But signal is noisy, and we use simple trick: wait 15% window and
   multiply to `log(0.15)/log(0.02)` (because speed growth is ~ logarithmic).
 
-Measure `P`:
+Measure `Kp`:
 
-- Set `I` to max possible, `P` min possible (1), measure all at 0.3 setpoint.
+- Set `Kobservers` to safe value (1.0), `Kp` min possible (0.3\*b0),
+  `P_corrcoeff` to 0.0, measure all at minimal allowed speed.
 - Wait for stable speed
 - Measure noise amplitude, abs(max - min) for period ~ start/stop time.
 - Use starting step = +4.0, and halving method. Check noise amplitude not exceed
   110% of initial value.
 - Make 7 iterations total (last step will be 0.1 - good precision).
-- Use 0.75 of final value as safe.
+- Use 0.6 of final value as safe.
 
 It would be better to count dispersion instead, but that's more complicated.
 Counting min/max after median filter seems to work. Note, speed value is very
 noisy. Applying some filter before min/max check is mandatory.
 
-Measure `I`:
+Measure `Kobservers`:
 
-- Set `I` to max possible, `P` to calibrated.
-- Apply 5Hz low pass Butterworth filter to input signal (median filter
-  has less predictable response)
-- Change setpoint from 0.3 to 0.8 and measure max reached speed.
-- Find `I` with halving method. On each step repeat setpoint change from 0.3
-  to 0.8, and check if overshoot not exceed 15% of initial max speed.
-- Use 1/0.75 of final value as safe.
+- Set `Kobservers` to 0.0, `Kp` to calibrated, `P_corrcoeff` to 0.0,
+  measure all at minimal allowed speed.
+- Wait for stable speed
+- Measure noise amplitude, abs(max - min) for period ~ start/stop time.
+- Use starting step = +4.0, and halving method. Check noise amplitude not exceed
+  110% of initial value.
+- Make 7 iterations total (last step will be 0.1 - good precision).
+- Use 0.6 of final value as safe.
+
+Measure `P_corrcoeff`:
+
+- Set `Kobservers` to calibrated, `Kp` to calibrated, `P_corrcoeff` to 0.0,
+  measure all at minimal allowed speed.
+- Wait for stable speed
+- Measure noise amplitude, abs(max - min) for period ~ start/stop time.
+- Use starting step = +4.0, and halving method. Check noise amplitude not exceed
+  110% of initial value.
+- Make 7 iterations total (last step will be 0.1 - good precision).
+- Use 0.6 of final value as safe.
 
 
 # More to read
@@ -229,3 +244,4 @@ Links below are not mandatory, but can simplify understating of this document.
    on triac control angle.
 3. [Panasonic Application Note 030, Driving Triacs with Phototriacs](https://www.panasonic-electric-works.com/cps/rde/xbcr/pew_eu_en/dd_x615_en_an_030.pdf).
 4. [ST AN440. Triac control with a microcontroller powered from a positive supply](https://www.st.com/resource/en/application_note/cd00003866-triac-control-with-a-microcontroller-powered-from-a-positive-supply-stmicroelectronics.pdf)
+5. [A Simulative Study on Active Disturbance Rejection Control (ADRC) as a Control Tool for Practitioners - Gernot Herbst](https://arxiv.org/pdf/1908.04596.pdf)
