@@ -141,6 +141,10 @@ void test_median_64() {
 }
 
 
+void setUp(void) {}
+void tearDown(void) {}
+
+
 int main() {
     UNITY_BEGIN();
     RUN_TEST(test_median_0_el);

@@ -170,6 +170,9 @@ void test_eeprom_float() {
 }
 
 
+void setUp(void) {}
+void tearDown(void) {}
+
 
 int main() {
     UNITY_BEGIN();
